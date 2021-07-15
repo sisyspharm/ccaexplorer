@@ -1,0 +1,16 @@
+,full_name,organ,liver_score,pancreas_score,database,abbv_name
+1,KKK-D068_none,liver-like,0.666666667,0.333333333,Our cell line panel,D068
+2,KKK-D131_none,pancreas-like,0.222222222,0.777777778,Our cell line panel,D131
+3,KKK-D138_none,liver-like,0.555555556,0.444444444,Our cell line panel,D138
+4,HuCCA-1_none,pancreas-like,0.222222222,0.777777778,Our cell line panel,HUCCA1
+5,HuCCT-1_none,pancreas-like,0.333333333,0.666666667,Our cell line panel,HUCCT1
+6,HuH-28_none,liver-like,1,0,Our cell line panel,Huh28
+7,KKU-055_none,liver-like,0.555555556,0.444444444,Our cell line panel,K055
+8,KKU-100_none,liver-like,0.666666667,0.333333333,Our cell line panel,K100
+9,KKU-156_none,pancreas-like,0.222222222,0.777777778,Our cell line panel,K156
+10,KKU-213_none,pancreas-like,0.222222222,0.777777778,Our cell line panel,K213
+11,KKU-214_none,pancreas-like,0.222222222,0.777777778,Our cell line panel,K214
+12,RBE_none,liver-like,0.666666667,0.333333333,Our cell line panel,RBE
+13,SSP-25_none,liver-like,0.777777778,0.222222222,Our cell line panel,SSP25
+14,TFK-1_none,pancreas-like,0.111111111,0.888888889,Our cell line panel,TFK1
+15,YSCCC_none,pancreas-like,0.333333333,0.666666667,Our cell line panel,YSCCC
