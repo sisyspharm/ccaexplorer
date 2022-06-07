@@ -1,0 +1,222 @@
+---
+title:"Figure 3 CCA DR subtyping"
+author: "SJ"
+output: html_document
+---
+
+```
+```{r Prepare data for plot heatmap}
+
+rm(list = ls())
+
+library(plyr)
+library(dplyr)
+setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR//Finaltable/")
+data <- read.csv("Allparameters_100Drug_15cellline.csv")
+Drugs <- levels(factor(data$agent))
+GR50 <- colnames(data)[7] # GRmax <- colnames(data)[5] 
+
+data[7] <- log(data[7], 10) #take log10
+
+
+myFun <- function(x) {
+  c(median = median(x))
+}
+
+data$MedianGR50N<-rep(tapply(data$GR50, data$agent, myFun), each=15)
+
+data$SubMedianGR50N<- (data$GR50-data$MedianGR50N)
+
+
+
+Submed_final <- data
+
+#write.table(data, file="D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/Submed final.csv",sep=",")
+
+
+
+#convettable and rank
+#rm(list = ls())
+#setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable")
+#dose <- read.csv("Submed final.csv")
+dose<- Submed_final
+drugs <- levels(factor(dose$agent))
+cell <- levels(factor(dose$cell_line))
+parameters <- colnames(dose[35]) #Subtract median GR50    
+
+
+#find IQR of subtract median center gr50
+myFun <- function(x) {    c(IQR = IQR(x))
+}
+
+dose$IQRGR50byR<-rep(tapply(dose$SubMedianGR50, dose$agent, myFun), each=15)
+
+dose2<- dose[rev(order(dose$IQRGR50)),]
+
+#filter only IQR>0
+
+dose2filter<-dose2%>%filter(dose2$IQRGR50byR>0) %>% droplevels
+
+#check level
+levels(dose2filter$agent)
+
+hi <- as.data.frame(rep(1,length(cell)),row.names = cell)
+for(p in rownames(dose2)) {
+  for (y in parameters) {
+    hi[which(rownames(hi)==dose2[p,"cell_line"]),paste(y,dose2[p,"agent"],sep="_")] <- dose2[p,y]
+  }
+}
+
+#Delete repeat column name
+colnames(hi) <- gsub("SubMedianGR50N_", "", colnames(hi))
+#Delete column 1
+hi <- subset(hi, select = -c(rep(1, length(cell))))
+#hi<- hi[ -c(1) ]
+
+```
+#correlation matrix with cut off
+```{r}
+
+#rm(list = ls())
+
+#20170806 
+
+library(ggplot2)
+library(reshape2)
+#setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable")
+#corrdata <- read.csv("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/CV_SubCenterMedianGR50__100Drugs_Setmin_09092018_RankIQR.csv",row.names = 1,header=TRUE) 
+
+#corrdata <- read.csv("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/CV_SubCenterMedianGR50__100Drugs_12112018_RankIQR_Final.csv",row.names = 1,header=TRUE)
+corrdata<- hi
+mat=cor(corrdata[,c(1,2:77)],use="all.obs",method="spearman")
+cormat_data <- mat
+
+round(mat,2)
+
+#plot Corrplot triangle circle
+library(RColorBrewer)
+library(corrplot)
+library("pheatmap")
+library(dendsort)
+
+
+
+hc<- hclust(as.dist(cormat_data), method="average")
+
+callback = function(hc, cormat_data){dendsort(hc)}
+
+pheatmap(cormat_data,
+         color = c("darkblue","blue4","blue3","blue2","blue1","blue","steelblue3",
+                   "coral1","coral2","orangered","orangered1","orangered2","orangered3","firebrick","darkred"),
+         breaks = c(-1,-0.85,-0.65,-0.45,-0.35,-0.25,-0.15, -0.0000000000000000001, 0.0000000000000000001,0.15,0.52,0.35,0.45,0.65,0.85,1),
+         fontsize_row = 6.5,
+         fontsize_col = 6.5,
+         clustering_method = "average",
+          main = "Similarity of the response to a panel of drugs in CCA cell lines", 
+         #clustering_distance_rows = dist((1-cor(t(cormat_data), method = "spearman"))),
+         #clustering_distance_cols = dist((1-cor(cormat_data, method = "spearman"))),
+         clustering_callback = callback,
+         cutree_cols = 4,
+         cutree_rows = 4)  
+
+#new plot 
+pheatmap(cormat_data,
+         color = c("blue4","blue3","blue2","blue1","grey60","grey70","grey80",
+                   "grey80","grey80","grey70","grey60","orangered1","orangered2","orangered3","firebrick"),
+         breaks = c(-1,-0.9,-0.8,-0.7,-0.6,-0.4,-0.2, -0.0000000000000000001, 0.0000000000000000001,0.2,0.4,0.6,0.7,0.8,0.9,1),
+         fontsize_row = 6.5,
+         fontsize_col = 6.5,
+         clustering_method = "average",
+         main = "Similarity of the response to a panel of drugs in CCA cell lines", 
+         #clustering_distance_rows = dist((1-cor(t(cormat_data), method = "spearman"))),
+         #clustering_distance_cols = dist((1-cor(cormat_data, method = "spearman"))),
+         clustering_callback = callback,
+         cutree_cols = 4,
+         cutree_rows = 4)  
+
+
+```
+ 
+#heatmap for 77 cpd IQR cut off 
+```{r}
+
+library("pheatmap")
+library("RColorBrewer")
+library(ggplot2)
+library(viridis)
+library(dendsort)
+library("colorspace")
+
+
+
+#Final table for plot using 100 drug which rnak by IQR 
+
+rnames <- row.names(hi)
+mat_data<-data.matrix(mydata[,1:77])  # transform column 2 to end into a matrix 77
+rownames(mat_data)<- rnames
+hc<- hclust(as.dist(mat_data), method="average")
+
+callback = function(hc, mat_data){dendsort(hc)}
+
+aka2 = data.frame(
+    Population_Types = factor(c(rep("Thai_OV",1),rep("Japanese_NonOV",2),rep("Thai_OV",8),
+                                rep("Japanese_NonOV",4) )),
+    Group_Cell= factor(c(rep("Group1", 1),rep("Group2",4),rep("Group1",3),rep("Group2",2),rep("Group1",2),rep("Group2",3)
+    )))
+rownames(aka2)<-rnames  
+
+ann_colors = list(
+    Population_Types= c(Japanese_NonOV="#FFFF00",Thai_OV="#A52A2A"),
+    Group_Cell= c(Group1="#00ffff",Group2="#FFA500")
+    
+)
+
+pheatmap(t(mat_data),
+         annotation_col = aka2 , 
+     
+#transpose row and column
+
+    
+        annotation_colors = ann_colors,
+annotation_legend = TRUE,
+         show_colnames = T,
+         show_rownames = T, 
+         cluster_rows = T,cutree_rows = 4,cutree_cols = 2,
+        #clustering_distance_rows = "euclidean",
+         clustering_distance_cols = dist((1-cor(t(mat_data), method = "spearman"))),
+         clustering_distance_rows = dist((1-cor(mat_data, method = "spearman"))),
+         clustering_method = "average",
+         color = c("darkred","firebrick","orangered3","orangered2","orangered1","orangered","grey60",
+                   "grey60","gray50","gray45","gray30","gray25","gray15","grey10","black"),
+         breaks = c(-3,-2.5,-2,-1.5,-1,-0.5,-0.0000005, -0.0000000000000000001, 0.0000000000000000001,0.0000005, 0.5,1,1.5,2,2.5,3),
+
+         main = "Drug response profiling of CCA cell lines using Spearman's correlation ", 
+         cluster_cols = T, legend = TRUE, 
+         border_color = FALSE,
+         fontsize = 7.6,
+         fontsize_row = 7,
+        clustering_callback = callback #reorder cluster
+)
+
+
+```
+
+
+#comparison of drug potency_scatter
+```{r}
+library(ggplot2)
+library(plyr)
+setwd("")
+cols <- c("CCA Subgroup1" = "cyan", "CCA Subgroup2" = "orange", "Cholangiocyte" = "gray")
+df<- read.csv("scatter_STO_Targe.csv")
+p<-ggplot(df, aes(x=reorder(agent,Order,max), y=SubMedian_Log10GR50,fill=group,color=group)) + 
+    geom_point(aes(shape=group,alpha=0.4,stroke = 2),size=6)+scale_color_manual(values=c("darkturquoise", "tan2", "black"))+scale_shape_manual(values = c(21, 22, 8)) + scale_fill_manual(values = cols)
+p
+
+# Rotate the dot plot
+p + coord_flip()+labs(x="agent", y = "SubMedianLog10GR50")  + theme_minimal()+theme(legend.position="top")+ theme(text = element_text(size=15))+ylim(-2,2)
+
+
+```
+
+
