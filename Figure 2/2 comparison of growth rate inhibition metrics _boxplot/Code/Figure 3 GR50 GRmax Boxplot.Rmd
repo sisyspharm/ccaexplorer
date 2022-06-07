@@ -1,0 +1,62 @@
+---
+title:"Figure 3 CCA DR similarity network"
+author: "SJ"
+output: html_document
+---
+
+```
+```{r Prepare data for plot heatmap}
+rm(list = ls())
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+setwd("")
+data <- read.csv("Allparameters_100Drug_15cellline.csv")
+data[7] <- log(data[7], 10) #take log10
+dose<-data
+
+d<- dose
+drugs <- levels(factor(d$agent))
+cell <- levels(factor(d$cell_line))
+parameters <- colnames(d[35]) #Subtract median GR50    
+
+
+#find IQR of subtract median center gr50
+myFun <- function(x) {    c(IQR = IQR(x))
+}
+
+d$IQRGR50byR<-rep(tapply(d$SubMedianGR50, d$agent, myFun), each=15)
+
+dose2<- d[rev(order(d$IQRGR50)),]
+
+#filter only IQR>0
+
+dose2filter<-dose2%>%filter(dose2$IQRGR50byR>0.1) %>% droplevels
+
+
+
+
+test<- dose2filter%>%select(agent, GR50, GRmax)
+test2<-test%>%mutate(Normalize_GR50=(GR50/2)+0.5) #min value of GR50  =-2.205
+
+p <- ggplot(test2, aes(x = reorder(agent,GRmax,FUN=median)))
+p <- p + geom_boxplot(aes(y = GRmax, fill = "GRmax",alpha=0.3))+scale_fill_manual(values=c('mediumaquamarine','tan1'))
+
+# adding the relative humidity data, transformed to match roughly the range of the temperature
+p <- p + geom_boxplot(aes(y = Normalize_GR50, fill = "Normalize_GR50",alpha=0.3)) +scale_fill_manual(values=c('mediumaquamarine','tan1'))
+
+# now adding the secondary axis, following the example in the help file ?scale_y_continuous
+# and, very important, reverting the above transformation
+p <- p + scale_y_continuous(sec.axis = sec_axis(~.*2-1, name = "Log10_GR50 (uM)"))+theme(axis.text.x = element_text(angle=90,size = rel(1)))+labs(x="Drugs")+coord_flip()+theme(legend.position="bottom",axis.text.y=element_text(size=8))
+
+p
+#save size 3.5 inch x 7.8 inch
+
+
+
+```
+
+
