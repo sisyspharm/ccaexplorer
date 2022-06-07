@@ -1,0 +1,42 @@
+---
+title:"Figure 3 IQRsub Med GR50"
+author: "SJ"
+output: html_document
+---
+
+```
+```{r Prepare data for plot heatmap}
+rm(list=ls())
+library(ggplot2)
+library(plyr) 
+library(ggrepel)
+setwd("")
+df<- read.csv("IQR_SubMedianGR50vsGRmax.csv")
+Subtype1<- df$Subtype1
+MedianGRmax<- df$MedianGRmax
+MedianLog10GR50<- df$MedianLog10GR50
+df$Subtype1<- as.factor(df$Subtype1)
+df$special_type<- as.factor(df$special_type)
+#df$IQR<- df$IQR_SM_GR50
+df$IQR<- as.factor(df$IQR_SM_GR50)
+length(which(df$IQR==0))
+
+
+
+p <- ggplot(df, aes(x=IQR, y=MedianGRmax,group=Subtype1,label=agent))  
+p <- ggplot(df, aes(x=IQR, y=MedianGRmax,group=Subtype1,label=agent))  
+p2 <- p+geom_point(aes( color=special_type),size=3) +
+    geom_text_repel(aes(label=agent), size=2.5)+
+    scale_color_manual( values = c('green3','royalblue1','black','orange','red1',
+                                   'thistle3','magenta','red1','#FFC0CB','palegreen',
+                                   '#FFE4C4','#D2691E','darkseagreen','#F08080','mediumpurple2',
+                                   '#C71585','peachpuff','darkcyan','peachpuff3','slategray1',
+                                   'tan3','#808000','#FFD700','#6495ED','royalblue','#FFFF00','#FF69B4','turquoise','orange','seagreen3','mistyrose3','lemonchiffon2','#20B2AA','#FF69B4','#F5F5F5','#00FFFF','#40E0D0','#6495ED','#D2B48C','#8A2BE2','#7B68EE'))+theme_classic()
+p2+theme(axis.text.x=element_text(color = "black", size=5, angle=90, vjust=.8, hjust=0.8)) +ylim(-1.2,1.2)+scale_x_discrete(expand = expand_scale(mult = c(0.1, 0.1))) + geom_vline(xintercept=61,linetype = "dashed")+ geom_hline(yintercept=-0.05,linetype = "dashed")+xlab("IQR of drug potency (GR50)")+ylab("Median of drug efficacy (GRmax)")+theme(legend.title=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank(),legend.position="bottom")
+  #geom_vline(aes(xintercept = which((df$agent)=='3STO'))
+
+
+
+```
+
+
