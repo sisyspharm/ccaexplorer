@@ -1,0 +1,174 @@
+---
+title:"Figure 1B heatmap"
+author: "SJ"
+output: html_document
+---
+
+```
+set.seed(199)
+```{r Heatmap}
+#Prepare data for plot only top1000
+rm(list = ls())
+library("pheatmap")
+library("RColorBrewer")
+library(ggplot2)
+library(viridis)
+library(dendsort)
+library("dplyr")
+library("tidyr")
+library(tidyverse)
+
+setwd("G:/My Drive/Milk CCA/All Final for paper/Table/RNA seq result")
+mydata=read.csv("median_log2tpm_combat_PB_2019-03-26_(1425)_Plot.csv", comment.char="#")
+#rnames <- mydata[,1] # assign labels in column 1 to "rnames"
+mydata2<- mydata%>%gather(key=cellline,
+                          value=log2TPM,c("KKU156","KKU213","KKU214","HuCCA1","RBE","KKK138","HuH28","KKU055","KKK068","KKU100","TFK1","YSCCC","HuCCT1","KKK131","SSP25"))
+
+zscore <- mydata2 %>%
+    select(Gene,cellline,log2TPM)%>%
+    group_by_(.dots=c("Gene")) %>%
+    mutate(mean_gene_drug=mean(log2TPM)) %>%
+    mutate(subtractmean=(log2TPM - mean(log2TPM)) )%>%
+    mutate(sd(log2TPM)) %>%
+    mutate(z_score_group = (log2TPM - mean(log2TPM)) / sd(log2TPM)) %>%
+    filter(sd(log2TPM)>0) %>%
+    rename(SD='sd(log2TPM)') %>% 
+    arrange(desc(SD))
+
+#select top 1000
+Top1000 <- zscore %>% "["(.,1:15000,)
+Top1000Flip <- Top1000 %>% 
+    select(Gene,cellline,z_score_group)%>%
+    spread(Gene,z_score_group)
+
+#View(zscore)
+#Option
+#list top 1000
+#create new table sum gene across cell and sort by SD 
+list1000gene <- zscore %>% 
+    group_by(Gene) %>%
+    tally(sd(log2TPM)) %>%
+    top_n(1000) 
+
+#create matrix for Plot Heatmap
+rnames <- Top1000Flip[,1] 
+rnames<- as.data.frame(unclass(rnames)) #change from char to factor
+rnames <- rnames[,1]
+mat.data<-data.matrix(Top1000Flip[,2:1001])  # transform column 2 to end into a matrix
+rownames(mat.data)<- rnames
+
+#write data of top1000 gene
+#write.table(mat.data, file="D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/Top1000Variance 18032019.csv",sep=",")
+
+
+
+library("pheatmap")
+library("RColorBrewer")
+library(ggplot2)
+library(viridis)
+library(dendsort)
+library("dplyr")
+library("tidyr")
+library(tidyverse)
+
+#setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable")
+#Top1000Flip=read.csv("Top1000Variance.csv", comment.char="#") #old  rnames <- rnames[,1]
+#rnames <- Top1000Flip[,1]
+#mat_data<-data.matrix(Top1000Flip[,2:1001])  # transform column 2 to end into a matrix
+#rownames(mat_data)<- rnames
+
+
+hc<- hclust(as.dist(mat.data), method="average")
+
+callback = function(hc, mat.data){dendsort(hc)}
+
+aka2 = data.frame(
+    HEPHL1_PANX1=factor(c(rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("Yes"), rep("No"), rep("No"), rep("No"), rep("Yes"), rep("No"), rep("No"), rep("No"))),
+    MICAL2_MICALCL=factor(c(rep("Yes"), rep("Yes"), rep("No"), rep("Yes"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"), rep("No"),rep("No"), rep("No"))),
+    LAMC2_NMNAT2=factor(c(rep("Yes"), rep("Yes"), rep("Yes"), rep("Yes"), rep("No"), rep("Yes"), rep("No"), rep("No"), rep("Yes"), rep("No"), rep("Yes"), rep("No"), rep("Yes"), rep("Yes"), rep("No"))),
+    KEAP1= factor(c(rep("Missense",1),rep("No",6),rep("Missense",1),rep("No",4),rep("Missense",1),rep("No",2) )),
+    PTEN=factor(c(rep("No",1),rep("Missense",1),rep("No",5),rep("Framshift_insertion",1),rep("No",4),rep("Missense",2),rep("No",1) )),
+    LRP1B=factor(c(rep("Missense",1),rep("No",7),rep("Missense",4),rep("No",3) )),
+    FLT3=factor(c(rep("Missense",1),rep("No",7),rep("Missense",4),rep("No",3) )),
+    BLM=factor(c(rep("No",2),rep("Missense",1),rep("Framshift_insertion",1),rep("No",3),rep("Missense",1),rep("No",6),rep("Missense",1) )),
+    SMAD4=factor(c(rep("No",6),rep("Missense",1),rep("No",1),rep("Missense",3),rep("No",4) )),
+    NOTCH3=factor(c(rep("No",2),rep("Missense",1),rep("No",3),rep("Missense",1),rep("No",6),rep("Missense",1),rep("No",1) )),
+    NOTCH2=factor(c(rep("Missense",6),rep("No",2),rep("SNVs_Indel",2),rep("Frameshift_deletion",2),rep("Missense",3) )),
+    NCOR1=factor(c(rep("No",2),rep("Missense",1),rep("No",1),rep("Missense",1),rep("No",1),rep("Missense",1),rep("No",8) )), 
+    PEG3=factor(c(rep("Missense",1),rep("No",1),rep("Missense",1),rep("No",2),rep("Missense",6),rep("No",3),rep("Missense",1) )),      
+    IDH1=factor(c(rep("No",11),rep("Missense",1),rep("No",2),rep("Missense",1) )),
+    TP53=factor(c(rep("Missense",3),rep("Stop_gain",1),rep("Missense",1),rep("Stop_gain",1),rep("No",2),rep("Missense",3),rep("No",1),rep("Missense",1),rep("Stop_gain",1),rep("Missense",1) )),
+    MAP2K2=factor(c(rep("No",1),rep("Missense",1),rep("No",6),rep("Missense",3),rep("No",4) )),
+    ERBB2=factor(c(rep("No",8),rep("Missense",2),rep("No",3),rep("Missense",2) )),
+    KRAS=factor(c(rep("No",1),rep("Missense",1),rep("No",5),rep("Missense",5),rep("No",3) )),
+    SMARCA4=factor(c(rep("No",2),rep("Missense",2),rep("No",3),rep("Stop_gain",1),rep("No",6),rep("Stop_gain",1) )),
+    BAP1=factor(c(rep("No",3),rep("Missense",1),rep("No",9),rep("Stop_gain",1),rep("No",1) )),
+    PBRM1=factor(c(rep("No",13),rep("SNVs_Indel",1),rep("No",1) )),
+    ARID1A=factor(c(rep("Stop_gain",1),rep("No",1),rep("Missense",1),rep("Nonframeshift_Indel",1),rep("No",2),rep("SNVs_Indel",1),rep("No",2),rep("Missense",1),rep("No",5) )),
+    KMT2C= factor(c(rep("SNVs_Indel",1),rep("Missense",3),rep("SNVs_Indel",1),rep("Missense",1),rep("SNVs_Indel",1),rep("Missense",1),rep("SNVs_Indel",4),rep("Missense",2),rep("SNVs_Indel",1) )),
+    Anatomical_location=factor(c(rep("iCCA",7),rep("pCCA",1),rep("iCCA",5),rep("eCCA",1),rep("iCCA",1) )),
+    Population_Types = factor(c(rep("Thai_OV",1),rep("Japanese_NonOV",2),rep("Thai_OV",8), rep("Japanese_NonOV",4) )),
+    Pancreas_liver_similarity=factor(c(rep("Pancreas_like",2),rep("Liver_like",2),rep("Pancreas_like",1),rep("Liver_like",3),rep("Pancreas_like",3),rep("Liver_like",2),rep("Pancreas_like",2)
+                                       
+    )))
+
+rownames(aka2)<-rnames  
+
+ann_colors = list(
+    Population_Types= c(Japanese_NonOV="#FFFF00",Thai_OV="#A52A2A"),
+    Group_Cell= c(Group1="#00ffff",Group2="#FFA500"),
+    Pancreas_liver_similarity=c(Pancreas_like="#842DCE",Liver_like="#50c878"),
+    Anatomical_location= c(iCCA="#808080",pCCA="#FFC0CB",eCCA="#ff278f"),
+    
+    KMT2C=c(Missense="red",SNVs_Indel="royalblue1"),
+    ARID1A=c(Missense="red",Stop_gain="blue",SNVs_Indel="royalblue1",Nonframeshift_Indel="darkcyan",No="Grey96" ),
+    PBRM1=c(SNVs_Indel="royalblue1",No="Grey96"),
+    BAP1=c(Missense="red",No="Grey96",Stop_gain="blue" ),
+    SMARCA4=c(Missense="red",No="Grey96",Stop_gain="blue" ),
+    KRAS=c(Missense="red",No="Grey96"),
+    ERBB2=c(Missense="red",No="Grey96"),
+    MAP2K2=c(Missense="red",No="Grey96"),
+    TP53=c(Missense="red",SNVs_Indel="royalblue1",No="Grey96",Stop_gain="blue"),
+    IDH1=c(Missense="red",No="Grey96"),
+    PEG3=c(Missense="red",No="Grey96"),
+    NCOR1=c(Missense="red",No="Grey96"),
+    NOTCH2=c(Missense="red",SNVs_Indel="royalblue1",No="Grey96",Frameshift_deletion="paleturquoise"),
+    NOTCH3=c(Missense="red",No="Grey96"),
+    SMAD4=c(Missense="red",No="Grey96"),
+    BLM=c(Missense="red",No="Grey96",Framshift_insertion="dodgerblue3"),
+    FLT3=c(Missense="red",No="Grey96"),
+    LRP1B=c(Missense="red",No="Grey96"),
+    KEAP1=c(Missense="red",No="Grey96"),
+    PTEN=c(Missense="red",No="Grey96",Framshift_insertion="dodgerblue3"),
+    LAMC2_NMNAT2=c(Yes="black",No="Grey97"),
+    MICAL2_MICALCL=c(Yes="black",No="Grey97"),
+    HEPHL1_PANX1=c(Yes="black",No="Grey97")   
+    )
+
+
+
+library("colorspace")
+pheatmap(t(mat.data),
+         annotation_col = aka2 ,       
+         annotation_colors = ann_colors,
+         annotation_legend = TRUE,
+         show_colnames = T,
+         show_rownames = F, 
+         #cluster_rows = T,cutree_cols = 2,
+         #clustering_distance_rows = "euclidean",
+         clustering_distance_cols = dist((1-cor(t(mat.data), method = "spearman"))),
+         clustering_distance_rows = dist((1-cor(mat.data, method = "spearman"))),
+         clustering_method = "average",
+         color = c('#b2182b','#d6604d','#f4a582','#fddbc7','#f7f7f7',
+                   "grey60","gray50",'#d1e5f0','#92c5de','#4393c3','#2166ac'),
+         breaks = c(-3,-2,-1,-0.5,-0.0000005, -0.0000000000000000001, 0.0000000000000000001,0.0000005, 0.5,1,2,3),
+         main = "Integrated genomic and molecular characterization in CCA cell lines ", 
+         cluster_cols = T, legend = TRUE, 
+         border_color = FALSE,
+         fontsize = 8,treeheight_row = 0,
+         
+         clustering_callback = callback #reorder cluster
+)
+```
+
+
