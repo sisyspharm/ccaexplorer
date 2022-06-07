@@ -1,0 +1,1131 @@
+---
+title: "Landscape of drug response biomarkers"
+output:html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+set.seed(100)
+```
+
+Download all biomarkers data
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/prediction_function')
+
+My.biomarkers <- read.csv('PredictedGenes_20191016.csv', header = TRUE, stringsAsFactors = FALSE)
+
+My.biomarkers$Drug <- trimws(My.biomarkers$Drug,which = 'both')
+```
+
+Run data using Module_1.Rmd
+Save drug sensitivity classification data
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_1')
+# write.csv(test, file = 'DrugSR_table_18022019.csv', row.names = FALSE, quote = FALSE)
+```
+
+Download drug sensitivity table, hallmarks and gene expression data
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_alldrugs_biomarkers')
+df.explevel <- read.csv('Expression_level_ALL_20191111.csv', header = TRUE, stringsAsFactors = FALSE)
+
+df.hallmark <- read.csv('Hallmarks_Matrix_20191111.csv', header = TRUE, stringsAsFactors = FALSE)
+
+drugSR <- read.csv('Table_DrugSensitivityClass_20191009.csv', header = TRUE, stringsAsFactors = FALSE)
+
+hallmark.category <- read.csv('Hallmark_Categories.csv', header = TRUE, stringsAsFactors = FALSE)
+
+nodeSize <- read.csv('NodeSize_11072019.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Modify Cell line names and generate gene expression data table
+```{r}
+# Change cell names
+require(tidyverse)
+from <- c('KKU.213','KKU.214','KKU.156','HuCCA.1','RBE','KKK.D138','TFK.1','YSCCC','SSP.25','KKU.100','HuCCT.1','KKK.D131','KKU.055','KKK.D068','HuH.28')
+
+to <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138','TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+
+map <- setNames(to,from)
+
+# rename cell names in df.explevel
+ln.col <- length(colnames(df.explevel))
+b <- lapply(1:ln.col, function(n) {
+  idx.name <- which(colnames(df.explevel) %in% names(map))
+  if (n %in% idx.name){
+    a <- as.data.frame(df.explevel[,c(n)])
+    colnames(a)[1] <- map[which(names(map) == colnames(df.explevel)[n])]
+  } else {
+    a <- as.data.frame(df.explevel[,c(n)])
+    colnames(a)[1] <- colnames(df.explevel)[n]
+  }
+  return(a)
+})
+# mRNA expression levels as in fold-change
+b.out <- do.call(cbind,b) %>% reshape2::melt(., id.vars = 'Gene', 
+                                             variable.name = 'Cell', 
+                                             value.name = 'exp.fc')
+# prepare drug response table
+my.drugSR <- drugSR %>% subset(Cell %in% to)
+```
+
+Add category to hallmarks
+```{r}
+hallmark.category <- hallmark.category %>% distinct(.,ID,Hallmark.Category,.keep_all = TRUE)
+# create a vector by matching ID names
+Hallmark.cat <- hallmark.category$Hallmark.Category[match(df.hallmark$ID,hallmark.category$ID)]
+# add to df.input data table
+df.hallmark<- tibble::add_column(df.hallmark, Hallmark.cat, .before = 0)
+df.hallmark$Cell <- gsub('_S.R','',df.hallmark$Cell) %>% trimws(., which = c('both'))
+```
+
+Save data as Hallmarks_Matrix_07042019.csv
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_alldrugs_biomarkers')
+# write.csv(df.input,'Hallmarks_Matrix_07042019.csv', row.names = FALSE, quote = FALSE )
+```
+
+Extract candidate gene list for first drug
+```{r}
+# All drugs are ranked by their node size.
+all.drug <- nodeSize$agent
+# but not all drugs are used in biomarker analysis
+drugBio <- unique(My.biomarkers$Drug)
+
+int.drug <- intersect(all.drug,drugBio)
+
+newDrug <- c('Subtype_1.2','OrgSubtype_1.2', int.drug)
+```
+
+PAM50 and CCA45
+```{r}
+PAM50 <- c('SLC39A6','MDM2','MYC','MLPH','CXXC5','BAG1','FOXA1','CENPF','MMP11','BLVRA',
+'ERBB2','PHGDH','RRM2','ESR1','KRT17','BIRC5','FOXC1','CCNB1','PTTG1','GPR160',
+'KRT5','UBE2C','SFRP1','ACTR3B','MKI67','TYMS','CDH3','MAPT','PGR','CEP55',
+'ANLN','BCL2','MELK','CDC6','MYBL2','KRT14','EGFR','FGFR4','NAT1','EXO1',
+'GRB7','CDC20','TMEM45B','ORC6L','MIA','UBE2T','CCNE1','CDCA1','KNTC2','KIF2C')
+
+CCA45 <- c('PHLDA3','NOTCH1','PUS1','VEGFC','FDXR','RRAD','ITGB4','NADSYN1','NCBP1','PHLDA2','TUFM','ELF3','COX6C','DCTPP1','KLF4','SATB1','KRT15','ATF3','CD9','DUSP5','IER2','MYC','TNFAIP2','FBLN1','ISCU','JAG2','RAD23B','TP53','TSPAN1','BTG2','FGFR3','CAV1','COL12A1','FOS','PTGER4','RALGDS','RHOD','UPP1','IL4R','ITGB2','LSM7','TCOF1','AREG','TP63','HR')
+
+intersect(PAM50,CCA45)
+
+```
+
+Create S3 data that contain the followings:
+1. Gene candidates and their hallmark annotation of individual drug treatment
+2. Gene expression levels of individual drug treatment
+3. Drug sensitivity and GR50 values of individual drug treatment
+```{r}
+# extract gene expression using genes from the list
+SS.df <- lapply(1:length(newDrug), function(x) {
+  sel.drug <- newDrug[x]
+  # sel.drug <- 'Subtype_1.2'
+  # if(sel.drug != 'Subtype_1.2'){
+  #   sel.drug <- 'CCA Subgroup' #paste0(sel.drug,'_S.R')
+  # }
+  genelist <- My.biomarkers %>% subset(Drug %in% sel.drug) %>% dplyr::select('Gene')
+
+  # Plot a heatmap of selected genes
+  predgenes <- genelist$Gene
+  # require gene expression table (b.out)
+  dtexp.m <- b.out %>% subset(Cell %in% to)
+  # prepare data for pheatmap
+  # to is a list of CCA cell lines with official names
+  temp <- dtexp.m %>% subset(Gene %in% predgenes) %>% as.data.frame()
+  
+  # rearrange cell lines in the order of Subtype 1 and 2
+  # define order of cell lines in subgroup 1
+  # from drugSR table
+  if(sel.drug == 'Subtype_1.2') {
+    # S1 = CCA1
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138')
+    # S2 = CCA2
+    S2 <- c('TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+    listSR <- 'Subtype_1.2'
+  } else if (sel.drug == 'OrgSubtype_1.2') {
+    # S1 = Pancreas-like
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','TFK-1','YSCCC','HuCCT-1','KKK-D131')
+    # S2 = Liver-like
+    S2 <- c('RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28')
+    listSR <- 'OrgSubtype_1.2'
+  } else {
+    drug1 <- gsub('_S.R','',sel.drug)
+    drug.name <- gsub(pattern = '\\.',replacement = '-',drug1)
+    listSR <- my.drugSR %>% subset(Drug %in% drug.name)
+    # log 10 transform GR50 for normal distribution
+    listSR$log10GR50 <- log10(listSR$GR50 + 4)
+    my.S1 <- listSR %>% subset(CCA.Subgroup == 'Subgroup 1') %>% arrange(-(log10GR50))
+    my.S2 <- listSR %>% subset(CCA.Subgroup == 'Subgroup 2') %>% arrange(-(log10GR50)) 
+    # extract cell line names arranged in order of ascending GR50 
+    S1 <- my.S1$Cell
+    S2 <- my.S2$Cell
+  }
+  
+  # arrange columns using indices
+  # require(reshape2)
+  sel.h2 <- temp %>% subset(Cell %in% c('Gene',S1,S2)) %>% reshape2::dcast(., Gene ~ Cell, var = 'exp.fc')
+  sel.h2 <- sel.h2[,c('Gene',S1,S2)] %>% tibble::column_to_rownames(., var = 'Gene')
+  
+  ### annotate candidate genes with hallmark name and category
+  # call genes from core_enrichment
+  sel.h <- tibble::rownames_to_column(sel.h2, var = 'Gene')
+  # add drug annotation
+  Drug <- rep(sel.drug,nrow(sel.h))
+  sel.h <- tibble::add_column(sel.h, Drug, .before = 0)
+  # subset df.hallmark to limit only drug of interest
+  if(sel.drug == 'Subtype_1.2'){
+    df.hm <- df.hallmark %>% subset(Cell == 'Subtype_1.2')
+  } else if (sel.drug == 'OrgSubtype_1.2'){
+    df.hm <- df.hallmark %>% subset(Cell == 'OrgSubtype_1.2')
+  } else {
+    df.hm <- df.hallmark %>% subset(Cell == sel.drug)
+  }
+  S <- lapply(1:length(sel.h$Gene), function(j) {
+    A <- lapply(1:nrow(df.hm), function(i) {
+      ss <- df.hm$core_enrichment[i]
+      # split string list
+      ss2 <- strsplit(ss,split = '/')
+      ss.df <- data.frame('Gene' = do.call(cbind,ss2))
+      # find whether the gene from selected gene list is in the core_enrichment
+      if (sel.h$Gene[j] %in% ss.df$Gene) {
+        data.frame('Gene' = sel.h$Gene[j],
+                   # 'Hallmark.Category' = df.hm$Hallmark.cat[i],
+                   'Hallmark.ID' = df.hm$ID[i],
+                   'Cell' = df.hm$Cell[i],
+                   'pvalue' = df.hm$pvalue[i],
+                   'p.adjust' = df.hm$p.adjust[i],
+                   'qvalues' = df.hm$qvalues[i]
+        )
+      } else {
+        data.frame('Gene' = sel.h$Gene[j],
+                   # 'Hallmark.Category' = NA,
+                   'Hallmark.ID' = NA,
+                   'Cell' = NA,
+                   'pvalue' = NA,
+                   'p.adjust' = NA,
+                   'qvalues' = NA
+        )
+      }
+    })
+    # build dataframe
+    AA <- do.call(rbind,A)
+    # get unique genes
+    uAA <- unique(AA)
+    # remove NA rows
+    H <- uAA[!is.na(uAA$Hallmark.ID),]
+  })
+  GeneHallmark <- do.call(rbind,S)
+  # screeen hallmark that has pvalue < 0.01 or p.adjust < 0.05 and qvalues < 0.25
+  GeneHallmark.filtered <- GeneHallmark %>% subset(p.adjust < 0.05)
+  if (nrow(GeneHallmark.filtered) == 0){
+    GeneHallmark.filtered <- GeneHallmark.filtered %>% subset(pvalue < 0.1)
+  }
+  # add MeanDecreaseAccuracy and MeanDecreaseGini
+  # S.df$MeanDecreaseGini <- genelist$MeanDecreaseGini[match(S.df$Gene,genelist$Gene)]
+  colnames(GeneHallmark.filtered)[which(colnames(GeneHallmark.filtered) == 'Cell')] <- 'Drug'
+  # drug sensitivity from listSR
+  DrugSensitivity <- listSR
+  
+  outputs <- list('Hallmarks' = GeneHallmark.filtered,
+                  'GeneExpression' = sel.h,
+                  'DrugSensitivity' = listSR)
+  return(outputs)
+})
+```
+
+Coerce into data tables of gene/hallmark, gene expression, drug sensitivity
+```{r}
+allHallmarks<- do.call(rbind,lapply(1:length(SS.df), function(x) SS.df[[x]]$Hallmarks))
+allGeneExpression <- do.call(rbind,lapply(1:length(SS.df), function(x) SS.df[[x]]$GeneExpression))
+
+allDrugSensitivity <- do.call(rbind,lapply(1:length(SS.df), function(x) SS.df[[x]]$DrugSensitivity))
+
+# # mean gene expr values
+# allGeneExpression <- reshape2::melt(allGeneExpression, id.vars = c('Gene','Drug'), variable.name = c('Cell'), value.name = c('expr'))
+# # calculate mean expression level of gene in a cell if
+# allGeneExpression <- allGeneExpression %>% group_by(Gene,Cell) %>% summarise(expr = mean(expr))
+# allGeneExpression <- reshape2::dcast(allGeneExpression, Gene ~ Cell, value.var = 'expr')
+# # now, we have a table of expression level of gene per cell line
+```
+
+Use ComplexHeatmap to plot figure 4B and S5A.
+```{r}
+# draw.hm <- function(x) {
+ClassifierGenes <- lapply(1:length(newDrug), function(x) {
+  # for(x in 1:length(DrugInit)) {
+  # select tested drug x
+  my.drug <- newDrug[x]
+  if(my.drug == 'Subtype_1.2') {
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138')
+    S2 <- c('TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+    Sall <- c(S1,S2)
+    my.drug.biom <- my.drug
+    coldat <- data.frame('Cell' = Sall,
+                         'CCA.Subgroup' = ifelse(Sall %in% S1,'Subgroup 1','Subgroup 2'))
+  } else if (my.drug == 'OrgSubtype_1.2') {
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','TFK-1','YSCCC','HuCCT-1','KKK-D131')
+    S2 <- c('RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28')
+    Sall <- c(S1,S2)
+    my.drug.biom <- my.drug
+    coldat <- data.frame('Cell' = Sall,
+                         'CCA.Subgroup' = ifelse(Sall %in% S1,'Subgroup 1','Subgroup 2'))
+  } else {
+    # define S1 and S2 using data from allDrugSensitivity
+    S1.df <- allDrugSensitivity %>% subset(Drug %in% my.drug & DrugSensitivity.kde %in% c('Sensitive')) %>% group_by(GR50) %>% arrange(.,-desc(GR50))
+    S2.df <- allDrugSensitivity %>% subset(Drug %in% my.drug & DrugSensitivity.kde %in% c('Resistant')) %>% group_by(GR50) %>% arrange(.,-desc(GR50))
+    S1 <- S1.df$Cell
+    S2 <- S2.df$Cell
+    # collect cell lines from Subgroup 1 (drug sensitive) and Subgroup 2 (drug resistant)
+    Sall <- c(S1,S2)
+    my.drug.biom <- paste0(my.drug,'_S.R')
+    # GR50 data table
+    coldat <- rbind(S1.df,S2.df)
+  }
+  # subset gene expression data
+  my.dt <- allGeneExpression %>% subset(Drug == my.drug) %>% dplyr::select(-Drug) %>% `rownames<-`(.,NULL) %>% tibble::column_to_rownames(., var = 'Gene')
+  
+  # rearrange columns by order of cells from tested drug
+  my.dt <- my.dt[,Sall]
+  # subset genes specific to a particular drug
+  my.genelist <- My.biomarkers %>% subset(Drug == my.drug) %>% arrange(desc(test.ROC.AUC),desc(Varimp.Score)) #subset(Drug %in% my.drug.biom)
+  # arrange rownames according to my.genelist$Gene
+  my.dt <- my.dt[match(my.genelist$Gene,rownames(my.dt)),]
+  # remove NA rows
+  my.dt <- my.dt[complete.cases(my.dt), ]
+  
+  # rank gene expression level in each cell line by important score of the genes
+  my.dt.sorted <- my.dt
+  # color scale
+  my.colorgradient3 <- rev(c('#67001f','#b2182b','#d6604d','#f4a582','#ffffff','#92c5de','#4393c3','#2166ac','#053061'))
+  
+  # filter out non-significant genes using wilcox.test (Mann-Whitney)
+  # keep both significant and non-significant genes
+  # rearrange rownames to column 'Gene'
+  dt.temp <- tibble::rownames_to_column(my.dt.sorted, var = 'Gene')
+  # reshape data frame
+  sig.test <- reshape2::melt(dt.temp,id.vars = c('Gene'), variable.name = c('Cell'), value.name = c('expr'))
+  # assign CCA.subgroup to cell
+  sig.test$Subgroup <- ifelse(sig.test$Cell %in% S1,'Sensitive','Resistant')
+  # caluculate Mann-Whitney p-value (unpaired) of expression by group per gene
+  set.seed(100)
+  sum.sig.test <- sig.test %>% group_by(Gene) %>% 
+    summarise(wilcox.pvalue = wilcox.test(expr ~ Subgroup,
+                                          exact = FALSE, 
+                                          correct = TRUE,
+                                          paired = FALSE)$p.value
+    )
+  
+  # calculate avaraged expression level
+  sum.genes <- sig.test %>% group_by(Gene) %>% 
+    summarise(mean.CCA1 = mean(expr[Subgroup == 'Sensitive']),
+              mean.CCA2 = mean(expr[Subgroup == 'Resistant'])) %>%
+    mutate(ratio = mean.CCA1 / mean.CCA2)
+  
+  # add p-value to the table
+  sum.genes$wilcox.pvalue <- sum.sig.test$wilcox.pvalue[match(sum.genes$Gene,sum.sig.test$Gene)]
+  
+  # identify genes with p-value < 0.05 when compared between Sensitive and Resistant groups
+  ha.row.df <- sum.genes %>% subset(wilcox.pvalue < 0.05) %>% arrange(desc(-wilcox.pvalue))
+  # if p > 0.05
+  if (nrow(ha.row.df) == 0) {
+    ha.row.df <- sum.genes %>% subset(wilcox.pvalue < 0.1) %>% arrange(desc(-wilcox.pvalue))
+  } 
+  if (nrow(ha.row.df) == 0) {
+    ha.row.df <- sum.genes %>% subset(wilcox.pvalue < 0.15) %>% arrange(desc(-wilcox.pvalue))
+  } 
+  if (nrow(ha.row.df) == 0) {
+    ha.row.df <- sum.genes %>% subset(wilcox.pvalue < 0.2) %>% arrange(desc(-wilcox.pvalue))
+  }
+  
+  # subset significantly expressed genes from expression data table
+  sig.test <- sig.test %>% subset(Gene %in% ha.row.df$Gene)
+  
+  # add VIP score from random forest model
+  sig.VIP <- extractVIP(sig.test)
+  
+  # add VIP score from random forest model
+  ha.row.df$VIP.rf <- sig.VIP$VIP.rf[match(ha.row.df$Gene,sig.VIP$Gene)]
+  
+  # add prediction accuracy from random forest model
+  ha.row.df$Accuracy.rf <- sig.VIP$Accuracy.rf[match(ha.row.df$Gene,sig.VIP$Gene)]
+  
+  # add VIP score from PLSDA
+  ha.row.df$VIP.plsda <- sig.VIP$VIP.plsda[match(ha.row.df$Gene,sig.VIP$Gene)]
+  
+  # add prediction accuracy from PLSDA
+  ha.row.df$Accuracy.plsda <- sig.VIP$Accuracy.plsda[match(ha.row.df$Gene,sig.VIP$Gene)]
+  
+  # add drug label
+  ha.row.df$Drug <- my.drug
+  
+  my.dt2 <- my.dt.sorted[c(ha.row.df$Gene),]
+  
+  my.dt2$Drug <- my.drug
+  
+  output <- list('Gene.summary' = ha.row.df,
+                 'Gene.expr' = my.dt2)
+  
+  return(output)
+  
+})
+
+# create table
+Classifier.genes <- do.call(rbind,lapply(1:length(ClassifierGenes), function(x) ClassifierGenes[[x]]$Gene.summary))
+
+Expression.genes <- do.call(rbind,lapply(1:length(ClassifierGenes), function(x) ClassifierGenes[[x]]$Gene.expr))
+
+```  
+
+Save the two tables
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_files')
+
+# write.csv(Classifier.genes, file = 'ListOfClassifierGenes.csv', row.names = FALSE)
+
+# write.csv(Expression.genes, file = 'ExpressionOfClassifierGenes.csv', row.names = FALSE)
+```
+
+Find VIP score using caret's random forest model
+X = gene expression of drug sensitive and resistant groups of cell lines
+Y = sensitive or resistant
+```{r}
+# function for getting VIP score and accuracy 
+extractVIP <- function(sig.test){
+  # 1.
+  # create X input table
+  dat.X <- reshape2::dcast(sig.test, Cell+Subgroup ~ Gene, value.var = 'expr',fun.aggregate = mean) %>% 
+    tibble::column_to_rownames(., var = 'Cell')
+  
+  # create Y input table
+  dat.Y <- reshape2::dcast(sig.test, Cell ~ Subgroup, value.var = 'Subgroup')
+  dat.Y$Subgroup <- ifelse(dat.Y$Sensitive != 0, 'Sensitive','Resistant')
+  dat.Y <- dat.Y %>% dplyr::select(Cell,Subgroup)
+  
+  # add factor level
+  dat.Y$Subgroup <- factor(dat.Y$Subgroup, levels = c('Sensitive','Resistant'))
+  dat.X$Subgroup <- factor(dat.X$Subgroup, levels = c('Sensitive','Resistant'))
+  
+  # get number of cell lines in each group
+  # drug sensitive group
+  Sen.group <- dat.Y %>% subset(Subgroup == 'Sensitive')
+  
+  Sen.number <- ceiling(nrow(Sen.group)*0.7)
+  # drug resistant group
+  Res.group <- dat.Y %>% subset(Subgroup == 'Resistant')
+  
+  Res.number <- ceiling(nrow(Res.group)*0.7)
+  
+  # set the minimum number of each group to 3
+  if(Sen.number < 3 | Res.number < 3) {
+    n.Sampling <- 3
+  } else {
+    n.Sampling <- min(Sen.number,Res.number)
+  }
+  
+  # random sample sensitive group
+  if(nrow(Sen.group) < 3) {
+    
+    S.set <- dat.X %>% subset(rownames(.) %in% Sen.group$Cell)
+    S.set <- S.set[rep(row.names(S.set), 2),]
+    
+  } else {
+    set.seed(100)
+    S.set <- dat.X %>% tibble::rownames_to_column(., var = 'Cell') %>% 
+      subset(Cell %in% Sen.group$Cell) %>% 
+      sample_n(., size = n.Sampling) %>%
+      `rownames<-`(.,NULL) %>%
+      tibble::column_to_rownames(., var = 'Cell')
+    
+  } 
+  # random sample resistant group
+  if(nrow(Res.group) < 3) {
+    
+    R.set <- dat.X %>% subset(rownames(.) %in% Res.group$Cell)
+    R.set <- R.set[rep(row.names(R.set), 2),]
+    
+  } else {
+    set.seed(100)
+    R.set <- dat.X %>% tibble::rownames_to_column(., var = 'Cell') %>% 
+      subset(Cell %in% Res.group$Cell) %>% 
+      sample_n(., size = n.Sampling) %>%
+      `rownames<-`(.,NULL) %>%
+      tibble::column_to_rownames(., var = 'Cell')
+    
+  } 
+  
+  # combine sensitive and resistant cells to a training dataset
+  trainingX <- rbind(S.set,R.set)
+  
+  # 2. build training model for random forest model
+  require(caret)
+  set.seed(100)
+  control <- caret::trainControl(method = 'LOOCV', # limit to 50-100 repeats
+                                 # number = 10,
+                                 # repeats = 10,
+                                 savePredictions = 'all',
+                                 classProbs = TRUE,
+                                 summaryFunction = twoClassSummary
+  )
+
+  #Number randomely variable selected is mtry
+  mtry <- floor(sqrt(ncol(trainingX)))
+  
+  tunegrid <- expand.grid(.mtry = mtry)
+  
+  rf_default <- caret::train(Subgroup ~ ., 
+                             data = trainingX, 
+                             method  ='rf', 
+                             metric = 'ROC',
+                             tuneGrid = tunegrid, 
+                             trControl = control)
+  
+  # 3.test the prediction model using testing data set
+  # remove Subgroup column
+  testingX <- dat.X %>% tibble::rownames_to_column(., var = 'Cell') %>% 
+    subset(!Cell %in% rownames(trainingX)) %>% 
+    `rownames<-`(., NULL) %>%
+    tibble::column_to_rownames(., var = 'Cell') %>%
+    dplyr::select(-one_of('Subgroup'))
+  
+  # predict subclasses from expr using rf model
+  testResult <- predict(rf_default, 
+                        testingX, 
+                        type = 'prob') %>% as.data.frame()
+  # based on probability
+  testResult$pred <- ifelse(testResult$Sensitive > testResult$Resistant, 'Sensitive','Resistant')
+  
+  # add actual response
+  actual.resp <- dat.X %>% tibble::rownames_to_column(., var = 'Cell') %>% 
+    subset(!Cell %in% rownames(trainingX)) %>% 
+    dplyr::select(Cell,Subgroup)
+  
+  # add to testResult
+  testResult$resp <- actual.resp$Subgroup[match(rownames(testResult), actual.resp$Cell)]
+  
+  # change to numeric
+  testResult$pred <- ifelse(testResult$pred == 'Sensitive', 1, 2)
+  testResult$resp <- ifelse(testResult$resp == 'Sensitive', 1, 2)
+  
+  # add factor levels
+  testResult$pred <- factor(testResult$pred, levels = c(1,2))
+  testResult$resp <- factor(testResult$resp, levels = c(1,2))
+  
+  # 4. calculate prediction accuracy
+  accuracy <- caret::confusionMatrix(data = testResult$pred,
+                         reference = testResult$resp)$overall[1]
+  
+  # extract VIP score from random forest model
+  drug.VIP <- caret::varImp(rf_default, scale = TRUE)$importance
+  drug.VIP <- tibble::rownames_to_column(drug.VIP, var = 'Gene')
+  
+  # change column names
+  colnames(drug.VIP) <- c('Gene','VIP.rf')
+  
+  # add accuracy values
+  drug.VIP$Accuracy.rf <- as.numeric(accuracy)
+  
+  # 5. calculate VIP score using PLSR
+  set.seed(100)
+  pls.model <- caret::plsda(x = trainingX[,-c(1)], 
+                            y = as.factor(trainingX[,c(1)]),
+                            # ncomp = 5,
+                            probMethod = 'softmax')
+
+  # test accuracy
+  pls.result <- predict(pls.model, testingX, type = 'prob') %>% as.data.frame()
+  
+  # change column names
+  colnames(pls.result) <- c('Sensitive','Resistant')
+  
+  # predicted response
+  pls.result$pred <- ifelse(pls.result$Sensitive > pls.result$Resistant, 'Sensitive','Resistant')
+  
+  # actual response 
+  real.resp <- dat.X %>% tibble::rownames_to_column(., var = 'Cell') %>% 
+    subset(Cell %in% rownames(testingX)) %>% 
+    dplyr::select(Cell,Subgroup)
+  
+  # real response
+  pls.result$resp <- real.resp$Subgroup[match(rownames(pls.result),real.resp$Cell)]
+  
+  # add factor levels
+  pls.result$pred <- factor(pls.result$pred, levels = c('Sensitive','Resistant'))
+  pls.result$resp <- factor(pls.result$resp, levels = c('Sensitive','Resistant'))
+  
+  # calculate prediction accuracy
+  pls.accuracy <- caret::confusionMatrix(data = pls.result$pred,
+                         reference = pls.result$resp)$overall[1]
+  
+  # extract VIP score from PLSDA model
+  VIP.pls <- caret::varImp(pls.model)
+  
+  # scale VIP score to 0-100
+  VIP.pls2 <- VIP.pls %>% mutate(Gene = rownames(.),
+                                 VIP.plsda = ((Overall - min(Overall)) / (max(Overall) - min(Overall)))*100) %>%
+    dplyr::select(Gene,VIP.plsda)
+  
+  # add VIP to drug.VIP
+  drug.VIP$VIP.plsda <- VIP.pls2$VIP.plsda[match(drug.VIP$Gene,VIP.pls2$Gene)]
+  drug.VIP$Accuracy.plsda <- pls.accuracy
+  
+  return(drug.VIP)
+
+  }
+
+```
+
+Draw Figure 4A 
+```{r}
+# make table for ComplexHeatmap annotation
+ColDat <- lapply(1:length(newDrug), function(x) {
+  my.drug <- newDrug[x]
+  if(my.drug == 'Subtype_1.2') {
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138')
+    S2 <- c('TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+    Sall <- c(S1,S2)
+    my.drug.biom <- my.drug
+    coldat <- data.frame('Cell' = Sall,
+                         'GR50' = NA,
+                         'Class.mc' = NA,
+                         'Class.kde' = NA,
+                         'DrugSensitivity.mc' = NA,
+                         'DrugSensitivity.kde' = NA,
+                         'CCA.Subgroup' = ifelse(Sall %in% S1,'Subgroup 1','Subgroup 2'),
+                         'Drug' = 'Subtype_1.2',
+                         'log10GR50' = NA
+                         )
+  } else if (my.drug == 'OrgSubtype_1.2') {
+    S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','TFK-1','YSCCC','HuCCT-1','KKK-D131')
+    S2 <- c('RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28')
+    Sall <- c(S1,S2)
+    my.drug.biom <- my.drug
+    coldat <- data.frame('Cell' = Sall,
+                         'GR50' = NA,
+                         'Class.mc' = NA,
+                         'Class.kde' = NA,
+                         'DrugSensitivity.mc' = NA,
+                         'DrugSensitivity.kde' = NA,
+                         'CCA.Subgroup' = ifelse(Sall %in% S1,'Subgroup 1','Subgroup 2'),
+                         'Drug' = 'OrgSubtype_1.2',
+                         'log10GR50' = NA
+                         )
+  } else {
+    # define S1 and S2 using data from allDrugSensitivity
+    S1.df <- allDrugSensitivity %>% subset(Drug %in% my.drug & DrugSensitivity.kde %in% c('Sensitive')) %>% group_by(GR50) %>% arrange(.,-desc(GR50))
+    S2.df <- allDrugSensitivity %>% subset(Drug %in% my.drug & DrugSensitivity.kde %in% c('Resistant')) %>% group_by(GR50) %>% arrange(.,-desc(GR50))
+    S1 <- S1.df$Cell
+    S2 <- S2.df$Cell
+    # collect cell lines from Subgroup 1 (drug sensitive) and Subgroup 2 (drug resistant)
+    Sall <- c(S1,S2)
+    my.drug.biom <- paste0(my.drug,'_S.R')
+    # GR50 data table
+    coldat <- as.data.frame(rbind(S1.df,S2.df))
+  }
+})
+
+ColDat <- do.call(rbind, ColDat)
+
+```
+
+Save table DrugSenstivity by KDE
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_files')
+# 
+# write.csv(ColDat, file = 'DrugSensitivityByKDE.csv', row.names = FALSE)
+```
+
+
+```{r}
+require(ComplexHeatmap)
+# Modify Column annotations
+coldat <- ColDat %>% subset(Drug %in% my.drug) %>% as.data.frame()
+
+if (my.drug == 'Subtype_1.2'){
+  df <- coldat %>% dplyr::select(Cell,CCA.Subgroup) %>% 
+    `rownames<-`(.,NULL) %>% 
+    tibble::column_to_rownames(., var = 'Cell')
+  ha <- ComplexHeatmap::HeatmapAnnotation(df = df,
+                          col = list(CCA.Subgroup = c('Subgroup 1' = 'cyan','Subgroup 2' = 'orange')),
+                          gap = unit(c(2),'mm'),
+                          show_annotation_name = TRUE,
+                          # annotation_name_gp = gpar(fontsize = 7, family = 'Arial'),
+                          annotation_name_side = 'left',
+                          annotation_legend_param = list(
+                            direction = 'horizontal')
+  )
+} else if (my.drug == 'OrgSubtype_1.2') {
+  df <- coldat %>% dplyr::select(Cell,CCA.Subgroup) %>% 
+    `rownames<-`(.,NULL) %>% 
+    tibble::column_to_rownames(., var = 'Cell')
+  ha <- ComplexHeatmap::HeatmapAnnotation(df = df,
+                          col = list(CCA.Subgroup = c('Subgroup 1' = 'darkolivegreen','Subgroup 2' = 'firebrick4')),
+                          gap = unit(c(2),'mm'),
+                          show_annotation_name = TRUE,
+                          # annotation_name_gp = gpar(fontsize = 7, family = 'Arial'),
+                          annotation_name_side = 'left',
+                          annotation_legend_param = list(
+                            direction = 'horizontal')
+  )
+  
+} else {
+  # data frame to plot log10GR50 bars
+  df <- coldat %>% `rownames<-`(., NULL) %>% 
+    tibble::column_to_rownames(., var = 'Cell') %>% 
+    dplyr::select(DrugSensitivity.kde)
+  colnames(df) <- c('Drug.Sensitivity')
+  ha <- ComplexHeatmap::HeatmapAnnotation(df = df,
+                          col = list(Drug.Sensitivity = c('Sensitive' = 'darkolivegreen', 'Resistant' = 'firebrick4')
+                                     # CCA.Subgroup = c('Subgroup 1' = 'cyan','Subgroup 2' = 'orange')
+                          ),
+                          gap = unit(c(2), 'mm'),
+                          annotation_legend_param = list(direction = 'horizontal',
+                                                         nrow = 1),
+                          # gp = gpar(fill = ifelse(coldat$Cell %in% CCA.S1,'cyan','orange'))),
+                          # annotation_height = unit.c(unit(2, 'cm'), unit(2, 'cm'), unit(2, 'cm')),
+                          show_annotation_name = TRUE,
+                          # annotation_name_gp = gpar(fontsize = 7, family = 'Arial'),
+                          annotation_name_side = 'left'
+                          # annotation_name_rot = c(0)
+  )
+}
+
+# expression data tabke
+dset.cca <- Expression.genes %>% subset(Drug %in% my.drug)
+
+# create clinical data
+clinical.data.cca <- data.frame('ID' = to)
+
+# non-OV cell lines
+nonfluke <- c('RBE','SSP-25','YSCCC','HuH-28','TFK-1','HuCCT-1')
+
+# liver-like cell lines
+liver <- c('RBE','HuH-28','KKU-100','KKK-D138','KKK-D068','KKU-055','SSP-25')
+
+# compose clinical data
+clinical.data.cca <- clinical.data.cca %>% 
+  mutate(OrganSubtype = case_when(ID %in% liver ~ 'Liver-like',
+                                  TRUE ~ 'Pancrease-like'),
+         Fluke.Infection = case_when(ID %in% nonfluke ~ 'Fluke-neg',
+                                     TRUE ~ 'Fluke-pos'),
+         DrugSubtype = case_when(ID %in% to[1:6] ~ 'CCA1',
+                                 TRUE ~ 'CCA2'),
+         Country = case_when(ID %in% nonfluke ~ 'Japan',
+                             TRUE ~ 'Thailand'))
+
+# add factor levels to clinical.data.cca
+clinical.data.cca$Fluke.Infection <- factor(clinical.data.cca$Fluke.Infection,
+                                            levels = c('Fluke-pos','Fluke-neg'))
+
+clinical.data.cca$Country <- factor(clinical.data.cca$Country,
+                                    levels = c('Thailand','Japan'))
+
+clinical.data.cca$DrugSubtype <- factor(clinical.data.cca$DrugSubtype,
+                                        levels = c('CCA1','CCA2'))
+
+clinical.data.cca$OrganSubtype <- factor(clinical.data.cca$OrganSubtype,
+                                         levels = c('Liver-like','Pancrease-like'))
+
+clinical.data.cca <- tibble::column_to_rownames(clinical.data.cca, var = 'ID')
+
+## Create row annotation
+rowdat <- Classifier.genes %>% subset(Drug %in% my.drug)
+
+# For CCA subgroups, we group genes COL12A1,VEGFC,FBLN1 as 'Neg'
+rowdat$Group <- ifelse(rowdat$Gene %in% c('COL12A1','VEGFC','FBLN1'),'Neg','Pos')
+rowdat$Group <- factor(rowdat$Group, levels = c('Pos','Neg'))
+
+```
+
+```{r}
+# # rearrange genes by group and dimeCor
+# rowdat.Pos <- rowdat %>% subset(Group == 'Pos') %>% arrange(-ratio)
+# rowdat.Neg <- rowdat %>% subset(Group == 'Neg') %>% arrange(-ratio)
+# rowdat <- rbind(rowdat.Pos, rowdat.Neg)
+
+# rearrange genes by p-value and dimeCor
+rowdat.Pos <- rowdat %>% subset(Group == 'Pos') %>% arrange(wilcox.pvalue)
+rowdat.Neg <- rowdat %>% subset(Group == 'Neg') %>% arrange(-wilcox.pvalue)
+rowdat <- rbind(rowdat.Pos, rowdat.Neg)
+
+# make sure that genes in rows were arranged by Gini score from high to low
+ha.row.VIPrf <- ComplexHeatmap::rowAnnotation(VIP.rf = anno_barplot(rowdat$VIP.rf, which = 'row',
+                                                 gp = gpar(fill = 'black'),
+                                                 # ylim = c(0,0.05),
+                                                 axis_param = list(gp = gpar(fontsize = 5,
+                                                                             family = 'Arial'),
+                                                                   side = 'bottom'),
+                                                 # axis_direction = 'normal', # 'reverse'
+                                                 axis = TRUE),
+                              width = unit(1.5, 'cm'),
+                              show_annotation_name = TRUE,
+                              annotation_legend_param = list(direction = 'horizontal', nrow = 1),
+                              annotation_name_gp = gpar(fontsize = 10),
+                              annotation_name_offset = unit(c(6), 'mm'),
+                              annotation_name_rot = c(0)
+)
+
+ha.row.VIPplsda <- ComplexHeatmap::rowAnnotation(VIP.pls = anno_barplot(rowdat$VIP.plsda, which = 'row',
+                                                       gp = gpar(fill = 'black'),
+                                                       # ylim = c(0,0.05),
+                                                       axis_param = list(gp = gpar(fontsize = 5,
+                                                                                   family = 'Arial'),
+                                                                         side = 'bottom'),
+                                                       # axis_direction = 'normal', # 'reverse'
+                                                       axis = TRUE),
+                                 width = unit(1.5, 'cm'),
+                                 show_annotation_name = TRUE,
+                                 annotation_legend_param = list(direction = 'horizontal', nrow = 1),
+                                 annotation_name_gp = gpar(fontsize = 10),
+                                 annotation_name_offset = unit(c(6), 'mm'),
+                                 annotation_name_rot = c(0)
+)
+
+# Row annotation: wilcoxon p-values
+# make sure that genes in rows were arranged by Gini score from high to low
+ha.row.pval <- rowAnnotation(p.value = anno_points(-log2(rowdat$wilcox.pvalue), which = 'row',
+                                                   gp = gpar(col = 'black'),
+                                                   # ylim = c(0,0.05),
+                                                   axis_param = list(gp = gpar(fontsize = 5,
+                                                                               family = 'Arial'),
+                                                                     side = 'bottom'),
+                                                   # axis_direction = 'normal', # 'reverse'
+                                                   axis = TRUE),
+                             width = unit(1.5, 'cm'),
+                             show_annotation_name = TRUE,
+                             annotation_legend_param = list(direction = 'horizontal', nrow = 1),
+                             annotation_name_gp = gpar(fontsize = 10),
+                             annotation_name_offset = unit(c(6), 'mm'),
+                             annotation_name_rot = c(0)
+)
+
+rowdat$ratio.color <- ifelse(rowdat$ratio < 1, 'green','red')
+
+ha.row.ratio <- rowAnnotation(expr.ratio = anno_points(rowdat$ratio, which = 'row',
+                                                   gp = gpar(col = rowdat$ratio.color),
+                                                   # ylim = c(-3,3),
+                                                   axis_param = list(gp = gpar(fontsize = 5,
+                                                                               family = 'Arial'),
+                                                                     side = 'bottom'),
+                                                   # axis_direction = 'normal', # 'reverse'
+                                                   axis = TRUE),
+                             width = unit(1.5, 'cm'),
+                             show_annotation_name = TRUE,
+                             annotation_legend_param = list(direction = 'horizontal', nrow = 1),
+                             annotation_name_gp = gpar(fontsize = 10),
+                             annotation_name_offset = unit(c(6), 'mm'),
+                             annotation_name_rot = c(0)
+)
+
+# create row annotation of cancer hallmark
+hm.dat <- df.hallmark %>% subset(Cell == my.drug & p.adjust < 0.05) %>% arrange(-NES)
+hm.order <- hm.dat$Description
+hm.order <- factor(hm.order, levels = hm.order)
+
+# create dat.freq
+temp.freq <- allHallmarks %>% subset(Drug == my.drug & Gene %in% rowdat$Gene)
+dat.freq <- reshape2::dcast(temp.freq, Gene ~ Hallmark.ID)
+# convert NA to 0 and others to 1
+dat.freq[is.na(dat.freq)] <- 0
+dat.freq <- tibble::column_to_rownames(dat.freq, var = 'Gene')
+dat.freq[dat.freq > 0] <-1
+
+# scale gene expression level across cell lines
+dset.mat <- dset.cca[,-c(which(colnames(dset.cca) == 'Drug'))]
+mat <- t(apply(dset.mat, 1, scale))
+colnames(mat) <- colnames(dset.mat)
+mat <- as.data.frame(mat)
+
+mat <- mat[rowdat$Gene,] 
+
+if (nrow(mat) > 50) {
+  mat <- mat[1:50,]
+} else {
+  mat <- mat
+}
+
+# rearrange rows and columns
+dat.freq.2 <- dat.freq[rownames(mat),as.character(hm.order)]
+# delete prefix characters
+colnames(dat.freq.2) <- gsub('HALLMARK_','',colnames(dat.freq.2)) %>% trimws(., which = 'both')
+
+fq.hm <- ComplexHeatmap::Heatmap(as.data.frame(dat.freq.2), 
+                 name = 'hallmark', 
+                 col = c('white','black'), 
+                 cluster_rows = FALSE, 
+                 row_title = NULL, 
+                 cluster_columns = FALSE, 
+                 show_row_names = TRUE,
+                 row_names_side = 'left',
+                 column_names_gp = gpar(fontsize = 10, family = 'Arial'),
+                 rect_gp = gpar(col = 'gray80', lwd = 1),
+                 # heatmap_legend_param = list(title = "Methylation"), 
+                 width = ncol(dat.freq.2)*unit(4, "mm"))
+
+
+# Plot heatmap
+
+bio.hm <- Heatmap(as.matrix(mat), # my.dt.sorted
+                  # km = 2,
+                  # split = 2,
+                  # gap = unit(2,'mm'),
+                  # row_gap = gap,
+                  row_names_side = 'right',
+                  cluster_rows = FALSE, 
+                  # clustering_distance_rows = 'euclidean', 
+                  # clustering_method_rows = 'ward.D2',
+                  # show_row_dend = FALSE,
+                  cluster_columns = FALSE, 
+                  # clustering_distance_columns = 'euclidean', 
+                  # clustering_method_columns = 'ward.D2',
+                  # show_column_dend = FALSE,
+                  column_names_gp = gpar(fontsize = 10, family = 'Arial'),
+                  row_names_gp = gpar(fontsize = 10, family = 'Arial'),
+                  top_annotation = ha,
+                  # top_annotation_height = unit.c(unit(2, 'cm'), unit(2, 'cm'), unit(2, 'cm')),
+                  col = circlize::colorRamp2(c(-4,-3,-2,-1,0,1,2,3,4), my.colorgradient3),
+                  heatmap_legend_param = list(
+                    color_bar = 'discrete',
+                    direction = 'horizontal',nrow = 1),
+                  column_title = paste0('Classified by \n',gsub('_S.R','',my.drug),' GR50'),
+                  name = 'expr.level' # legend title
+)
+
+ComplexHeatmap::draw(fq.hm + bio.hm + ha.row.ratio + ha.row.pval + ha.row.VIPrf + ha.row.VIPplsda)
+
+```
+
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_files')
+pdf(paste0('BiomarkersIdentification_Fig4A_byPval_20200408.pdf'),
+    paper = 'A4',
+    width = 7, #inches
+    height = 12, #inches
+    useDingbats = FALSE  #avoid letters instead of point objects
+)
+  ComplexHeatmap::draw(fq.hm + bio.hm + ha.row.ratio + ha.row.pval + ha.row.VIPrf + ha.row.VIPplsda,
+       # annotation_legend_list = lgd_list,
+       # row_title = '', 
+       # column_title = '',
+       heatmap_legend_side = 'bottom', 
+       annotation_legend_side = 'bottom')
+  # decorate_annotation('log10GR50', {
+  #     grid.lines(c(0, 1), unit(c(0, 0), 'native'), gp = gpar(col = 'black'))
+  # })
+  dev.off()
+  
+# }
+```
+
+Figure 4B
+Overlaps of biomarkers using Node-edge network
+nodes = drugs
+edge = overlapping genes
+```{r}
+require(GGally)
+require(ggnetwork)
+require(sna)
+require(network)
+
+DrugNodes <- c('Subtype_1.2',
+               'Saracatinib','TAK733','Dasatinib',
+               'Gemcitabine','Cisplatin','FiveFU') #'OrgSubtype_1.2'
+Drug1 <- c('Saracatinib','TAK733','Dasatinib',
+           'Gemcitabine','Cisplatin','FiveFU')
+
+# subset significant gene biomarkers from Classifier.genes table
+X <- Classifier.genes %>% subset(Drug %in% DrugNodes)
+
+# findOverlap <- function(X){
+# X = list of genes in a drug
+my.drugs <- DrugNodes
+# define center drug
+center.drug <- 'Subtype_1.2'
+# find number of drugs
+n <- as.numeric(length(my.drugs))
+
+# create coordinates (x,y)
+# coords <- expand.grid(1:5,1:5)
+my.edges <- lapply(1:n, function(x) {
+  # x <- 1
+  if (x < n){
+    corX <- rep(n-x,x)
+    nx <- n-(x-1)
+    corY <- c(nx:n)
+    x <- x+1
+    out <- data.frame('from' = corX,
+                      'to' = corY)
+  } else {
+    out <- data.frame('from' = NA,
+                      'to' = NA)
+  }
+  return(out)
+})
+# build edge.list
+edge.list <- do.call(rbind,my.edges)
+# remove NA rows
+edge.list <- edge.list %>% subset(rownames(.) %in% which(!is.na(edge.list$from))) %>% as.data.frame()
+edge.list$from <- as.integer(edge.list$from)
+# build node.list
+node.list <- c(center.drug,my.drugs[c(which(my.drugs != center.drug))])
+node.list <- data.frame('id' = c(1:n),
+                        'label' = node.list)
+node.list$label <- as.character(node.list$label)
+node.list$label <- ifelse(node.list$label == 'Subtype_1.2','CCA Subtype 1',
+                          ifelse(node.list$label == 'OrgSubtype_1.2','Pancreas cancer-like', node.list$label))
+
+node.list$node.colors <- ifelse(node.list$label %in% Drug1,'D1',
+                                ifelse(node.list$label == 'Pancreas cancer-like', 'D3',
+                                       ifelse(node.list$label == 'CCA Subtype 1','D0','D2')))
+# count number of genes in each node
+vert <- X %>% group_by(Drug) %>% summarise(n = n())
+vert$Drug <- gsub('Subtype_1.2','CCA Subtype 1', vert$Drug)
+node.list$n <- vert$n[match(node.list$label,vert$Drug)]
+
+# build table for Genes
+dat <- lapply(1:n, function(p) {
+  temp <- X %>% subset(Drug %in% my.drugs[p])
+  Gene <- temp$Gene
+  Drug <- my.drugs[p]
+  
+  dat.out <- data.frame('Drug' = Gene)
+  colnames(dat.out) <- Drug
+  
+  return(dat.out)
+})
+
+# function for edges
+cbind.fill <- function(...){
+  nm <- list(...) 
+  nm <- lapply(nm, as.matrix)
+  n <- max(sapply(nm, nrow)) 
+  do.call(cbind, lapply(nm, function (x) 
+    rbind(x, matrix(, n-nrow(x), ncol(x))))) 
+}
+
+dset <- do.call(cbind.fill,dat)
+
+# find overlapping genes
+count.ov <- lapply(1:nrow(edge.list), function(d) {
+  # d <- 1
+  # select gene set A
+  A <- dset[,edge.list[d,1]]
+  # remove NA
+  A <- A[!is.na(A)]
+  # select gene set B
+  B <- dset[,edge.list[d,2]]
+  # remove NA
+  B <- B[!is.na(B)]
+  # count numbe of overlapped genes
+  AxB <- length(intersect(A,B))
+  return(AxB)
+})
+
+wt <- as.vector(do.call(rbind,count.ov))
+
+# append to edge.list table
+edge.list2 <- tibble::add_column(edge.list,wt,.after = 2) %>% as.data.frame()
+colnames(edge.list2) <- c('from','to','wt')
+
+# define node colors
+node.cols <- node.list
+# 
+# Drug1 <- c('PD318088','PD0325901','TAK733','Selumetinib','Ribociclib',
+#            'RO3306','Saracatinib','Bosutinib','Vandetanib','Dasatinib',
+#            'Azacitidine','Gefitinib','Lapatinib','Erlotinib','Afatinib',
+#            'Omipalisib','Momelotinib','Vorinostat','Nilotinib','Imatinib',
+#            'Masitinib','NVP-AEW541','Birinapant','Sunitinib','BGJ398-Nov',
+#            'Palbociclib','Fedratinib','Pacritinib','LY294002','I-BET',
+#            'Abemaciclib','JQ1','Fludarabine')
+# 
+node.cols$colors <- node.list$node.colors
+# replace number with label
+# edge.list$from <- node.list$label[match(edge.list$from,node.list$id)]
+# edge.list$to <- node.list$label[match(edge.list$to,node.list$id)]
+# 
+
+# plot figure
+require(tidygraph)
+require(ggraph)
+require(network)
+require(igraph)
+
+routes_tidy <- tbl_graph(nodes = node.list, 
+                         edges = edge.list2, 
+                         directed = TRUE)
+
+routes_tidy <- delete.edges(routes_tidy, which(E(routes_tidy)$wt == 0))
+
+layout <- create_layout(routes_tidy, layout = 'igraph', algorithm = 'nicely')
+
+# add factor level to label
+layout$label <- factor(layout$label, 
+                       levels = c('CCA Subtype 1',
+                                  'Saracatinib','TAK733','Dasatinib',
+                                  'Gemcitabine','Cisplatin','FiveFU'))
+# layout$node.colors <- node.cols$colors[match(layout$label,node.cols$label)] %>% as.factor()
+
+Fig4B <- ggraph(routes_tidy, 
+                   layout = 'linear',
+                   circular = TRUE
+) + 
+  geom_edge_arc(aes(width = wt),color = 'gray50', alpha = 0.8) +
+  scale_edge_width(range = c(0, 5)) +
+  geom_node_point(aes(color = as.factor(label),
+                      size = n),
+                  # size = 12,
+                  show.legend = FALSE) +
+  scale_size(range = c(5,15)) +
+  scale_color_manual(
+    limits = as.factor(layout$label),
+    values = c('CCA Subtype 1' = 'gray',
+               'Saracatinib' = 'cyan',
+               'TAK733' = 'cyan',
+               'Gemcitabine' = 'orange',
+               'Cisplatin' = 'orange',
+               'FiveFU' = 'orange',
+               'Dasatinib' = 'cyan',
+               'Pancreas cancer-like' = 'gray')
+  ) +
+  geom_node_text(aes(label = paste0(label,' (',n,')')),
+                 size = 4,
+                 nudge_y = -0.2,
+                 nudge_x = 0,
+                 repel = TRUE,
+                 show.legend = FALSE) +
+  labs(edge_width = "Overlap size") +
+  theme_graph() +
+  theme(
+    text = element_text(family = 'Arial', size = 10),
+    legend.position = 'bottom'
+  )
+
+# }
+```
+
+Save figure 4C
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_files')
+ggsave(Fig4B,
+       filename = 'Fig4B_20200408.pdf',
+       height = 18,
+       width = 15,
+       units = 'cm',
+       device = cairo_pdf
+       )
+
+# png('FigS6AC_20191021.png', 
+#     family = 'Arial',
+#     width = 42, 
+#     height = 25, 
+#     units = 'cm', 
+#     res = 600)
+# draw(FigS6A,
+#      # annotation_legend_list = lgd_list,
+#      # row_title = '', 
+#      # column_title = '',
+#      heatmap_legend_side = 'bottom', 
+#      annotation_legend_side = 'bottom')
+
+dev.off()
+```
