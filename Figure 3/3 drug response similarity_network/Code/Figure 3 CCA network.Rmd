@@ -1,0 +1,287 @@
+---
+title:"Figure 3 CCA DR similarity network"
+author: "SJ"
+output: html_document
+---
+
+```
+```{r Prepare data for plot heatmap}
+
+rm(list = ls())
+library(ggplot2)
+library(plyr) 
+library(ggrepel)
+library(viridis)
+library(dendsort)
+library("dplyr")
+library("tidyr")
+library(tidyverse)
+
+setwd("")
+data <- read.csv("Allparameters_100Drug_15cellline_plusSTO.csv")
+
+#add column of cca subtype
+data <- data %>%  mutate(CCA_group=cell_line)
+data1 <- data %>% mutate(CCA_group=recode(CCA_group, "HuCCA-1"="S1","HuCCT1"="S2","HUH28"="S2",
+                                          "KKU-D068"="S2","KKU-D131"="S2","KKU-D138"="S1",
+                                          "KKU-055"="S2","KKU-100"="S2","KKU-213"="S1","KKU-156"="S1","KKU-214"="S1",
+                                          "RBE"="S1","SSP-25"="S2","TFK-1"="S2","YSCCC"="S2"))
+plotdata<- data1 %>% select ("cell_line","CCA_group","agent","GR50","GRmax","GR_AOC","MedianGR50","SubMedianGR50","IQRGR50")
+agent <- levels(factor(data$agent))
+GR50 <- colnames(plotdata)[4] # 
+GRmax <- colnames(plotdata)[5] # 
+IQRGR50 <- colnames(plotdata)[8] #
+#plotdata[4] <- log(plotdata[4], 10) #take log10 GR50
+colnames(plotdata)[4] <- "Log10_GR50"
+colnames(plotdata)[7] <- "Log10MedianGR50"
+colnames(plotdata)[8] <- "Log10SubMedianGR50"
+Log10MedianGR50<-colnames(plotdata)[7]
+GRmax <- colnames(plotdata)[5]
+
+centroids <- aggregate(cbind(Log10_GR50,GRmax)~agent,plotdata,mean)
+
+IQR<- aggregate(cbind(Log10_GR50,GRmax)~agent,plotdata,IQR)
+
+#Add median line
+plotdata_sum<- plotdata %>%
+    group_by(agent) %>%
+    summarize(medianGR50 = median(Log10_GR50))
+
+#Add centroid for each group
+
+plotdata_centroid_x<- plotdata %>%
+    select(agent,CCA_group,Log10_GR50)%>%
+    group_by(agent, CCA_group)%>%
+    summarise(Log10_GR50 = list(Log10_GR50)) %>%
+    group_by(agent, CCA_group)%>%
+    spread(key=CCA_group,value=Log10_GR50) %>%
+    mutate(mean_GR50_S1= mean(unlist(S1)),
+           mean_GR50_S2= mean(unlist(S2)),
+           IQR_GR50_S1= IQR(unlist(S1)),
+           IQR_GR50_S2= IQR(unlist(S2)),
+           median_GR50_S1= median(unlist(S1)),
+           median_GR50_S2= median(unlist(S2)) )
+
+plotdata_centroid_y<- plotdata %>%
+    select(agent,CCA_group,GRmax)%>%
+    group_by(agent, CCA_group)%>%
+    summarise(GRmax = list(GRmax)) %>%
+    group_by(agent, CCA_group)%>%
+    spread(key=CCA_group,value=GRmax) %>%
+    mutate(mean_GRmax_S1= mean(unlist(S1)),
+           mean_GRmax_S2= mean(unlist(S2)),
+           IQR_GRmax_S1= IQR(unlist(S1)),
+           IQR_GRmax_S2= IQR(unlist(S2)),
+           median_GRmax_S1= median(unlist(S1)),
+           median_GRmax_S2= median(unlist(S2)) ) 
+
+#Add centroid of S1
+plotdata_centroid_S1<-inner_join(plotdata_centroid_x,plotdata_centroid_y, by = "agent",all=TRUE)%>%select(mean_GR50_S1,mean_GRmax_S1, IQR_GR50_S1,IQR_GRmax_S1)
+colnames(plotdata_centroid_S1)[colnames(plotdata_centroid_S1)=="mean_GR50_S1"] <- "Log10_GR50"
+colnames(plotdata_centroid_S1)[colnames(plotdata_centroid_S1)=="mean_GRmax_S1"] <- "GRmax"
+
+#Add centroid of S2
+plotdata_centroid_S2<-inner_join(plotdata_centroid_x,plotdata_centroid_y, by = "agent",all=TRUE)%>%select(mean_GR50_S2,mean_GRmax_S2, IQR_GR50_S2,IQR_GRmax_S2)
+colnames(plotdata_centroid_S2)[colnames(plotdata_centroid_S2)=="mean_GR50_S2"] <- "Log10_GR50"
+colnames(plotdata_centroid_S2)[colnames(plotdata_centroid_S2)=="mean_GRmax_S2"] <- "GRmax"
+
+centroid<- inner_join(plotdata_centroid_x,plotdata_centroid_y, by = "agent",all=TRUE)%>%select(mean_GR50_S1,mean_GRmax_S1,mean_GR50_S2,mean_GRmax_S2,IQR_GR50_S1,IQR_GRmax_S1, IQR_GR50_S2,IQR_GRmax_S2)
+
+Mydata <- inner_join(centroid, centroids, by = "agent")
+Mydata <- inner_join(Mydata, IQR, by = "agent")
+
+mergeDF <- inner_join(Mydata, plotdata, by = "agent",all=TRUE)
+
+#write.table(mergeDF, file="G:/My Drive\Milk CCA/All Final for paper/Table/DRresponse/Back up/NetworkFinaltable/Network10042019_plusmeanSTO_Log10GR50.csv",sep=",")
+
+
+#rm(list = ls())
+
+library(dplyr)
+
+setwd("G:/My Drive/Milk CCA/All Final for paper/Table/DRresponse/")
+data <- read.csv("Allparameters_100Drug_15cellline_09092018_wRule_setmin_Annotation_plusSTO.csv")
+Drugs <- levels(factor(data$agent))
+GR50 <- colnames(data)[7] # GRmax <- colnames(data)[5] 
+
+data[7] <- log(data[7], 10) #take log10
+
+myFun <- function(x) {
+    c(median = median(x))
+}
+
+data$MedianGR50N<-rep(tapply(data$GR50, data$agent, myFun), each=15)
+
+data$SubMedianGR50N<- (data$GR50-data$MedianGR50N)
+
+Submed_final <- data
+
+#write.table(data, file="D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/Submed final.csv",sep=",")
+
+#convettable and rank
+#rm(list = ls())
+#setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable")
+#dose <- read.csv("Submed final.csv")
+dose<- Submed_final
+drugs <- levels(factor(dose$agent))
+cell <- levels(factor(dose$cell_line))
+parameters <- colnames(dose[35]) #Subtract median GR50    
+
+
+#find IQR of subtract median center gr50
+myFun <- function(x) {    c(IQR = IQR(x))
+}
+
+dose$IQRGR50byR<-rep(tapply(dose$SubMedianGR50, dose$agent, myFun), each=15)
+
+dose2<- dose[rev(order(dose$IQRGR50)),]
+
+#filter only IQR>0
+
+dose2filter<-dose2%>%filter(dose2$IQRGR50byR>0) %>% droplevels
+
+#check level
+levels(dose2filter$agent)
+
+hi <- as.data.frame(rep(1,length(cell)),row.names = cell)
+for(p in rownames(dose2)) {
+    for (y in parameters) {
+        hi[which(rownames(hi)==dose2[p,"cell_line"]),paste(y,dose2[p,"agent"],sep="_")] <- dose2[p,y]
+    }
+}
+
+#Delete repeat column name
+colnames(hi) <- gsub("SubMedianGR50N_", "", colnames(hi))
+#Delete column 1
+hi <- subset(hi, select = -c(rep(1, length(cell))))
+#hi<- hi[ -c(1) ]
+
+library(ggplot2)
+library(reshape2)
+library(dendsort)
+#setwd("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable")
+#corrdata <- read.csv("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/CV_SubCenterMedianGR50__100Drugs_Setmin_09092018_RankIQR.csv",row.names = 1,header=TRUE) 
+#corrdata <- read.csv("D:/Siriraj/Lab_results/Library_responseCCA/TableByDrugsforGR/Finaltable/CV_SubCenterMedianGR50__100Drugs_12112018_RankIQR_Final.csv",row.names = 1,header=TRUE)
+
+#create correlation matrix 
+#77 grug IQR>0
+corrdata<- hi[1:78]
+
+mat<- corrdata[1:78][,order(colnames(corrdata[1:78]))]
+
+mat=cor(mat[,c(1,2:78)],use="all.obs",method="spearman")
+
+cormat_data <- mat
+cormat_data <- as.data.frame(t(cormat_data))
+#cormat_data <- add_rownames(cormat_data, "agent")
+#cormat_data <- cormat_data [1:78,][ order(row.names(cormat_data [1:78,])), ]
+
+library(dplyr)
+cormat_data  <- add_rownames(cormat_data , "agent")
+
+#rowbind corrmat with Prep data for network 14 **************************
+
+setwd("G:/My Drive/Milk CCA/All Final for paper/Table/DRresponse/")
+Prep_network_14<- read.csv("Prep data for network 14 plusmeanSTO.csv")
+
+rownames(Prep_network_14) <- Prep_network_14[,1]
+
+#plot network
+
+plotnetwork<-left_join(cormat_data , Prep_network_14, by = "agent")
+#de <- merge(Prep_network_14, cormat_data, by=0, all=TRUE)
+
+
+library(igraph)
+set.seed(123)
+
+cor.matrix <- mat<-data.matrix(plotnetwork[2:79])
+rownames(cor.matrix)<- colnames(cor.matrix)
+
+#edge set cut off
+# get row and column position 
+t = which(abs(cor.matrix) > 0.6 & lower.tri(cor.matrix),arr.ind=TRUE)
+
+#bind with correlation between drug 
+t <- cbind(t, cor.matrix[which(abs(cor.matrix) > 0.6 & lower.tri(cor.matrix),arr.ind=TRUE)]) ##this adds the correlation to the graph as an edge attribute "V3"
+
+#change to dataframe
+
+#t2<-as.data.frame(t)
+
+#mergeDF <- inner_join(Mydata, plotdata, by = "agent",all=TRUE)
+
+#create graph object
+
+t.graph=graph.data.frame(t,directed=F)
+
+#t.graph2=graph.data.frame(t2,directed=F)
+
+#change rowname to new column
+plotnetwork$names <- rownames(plotnetwork)
+
+#define edge color
+E(t.graph)$color <- ifelse(E(t.graph)$V3 > 0,'red','blue') #You had this as "V3 > 0.6" which I guess works but it is more readable as 0. that way if you decide to lower the correlation threshold you do not have to change this line too.
+
+#node
+
+#change number of vertex to name
+t.names <- colnames(cor.matrix)[as.numeric(V(t.graph)$name)]
+
+#node size
+#define node size
+node.size_T<-plotnetwork%>%select(names,comb)
+
+#create value of node size
+v.size <- node.size_T$comb[as.numeric(V(t.graph)$name)]
+
+#node color
+node.size_Col<-plotnetwork%>%select(names,CCA_group)%>%mutate(CCA_group=recode(CCA_group, S1="cyan",S2="orange" ))
+
+#create value of node color
+v.col <- node.size_Col$CCA_group[as.numeric(V(t.graph)$name)]
+
+#Order (number of vertices) of a graph
+
+minC <- rep(-Inf, vcount(t.graph))
+maxC <- rep(Inf, vcount(t.graph))
+minC[1] <- maxC[1] <- 0
+
+l <- layout_with_fr(t.graph, minx=minC, maxx=maxC,
+                    miny=minC, maxy=maxC)    
+
+#define color of vertex
+colrs <- c('cyan','orange')
+my_color=colrs[as.numeric(as.factor(v.col))]
+
+#Check edge
+t.graph
+#count edge connect
+sapply(V(t.graph)$name, function(x) length(E(t.graph)[from(V(t.graph)[x])]))
+
+#count vertice
+length(V(t.graph))
+#list name
+V(t.graph)$name
+
+
+#plot fixed graph 
+
+plot(t.graph, layout=l, 
+     rescale=T,
+     asp=0,
+     edge.arrow.size=0.5, 
+     vertex.label.cex=0.9, 
+     vertex.label.family="Arial",
+     vertex.label.font=1,
+     vertex.label=t.names,
+     vertex.shape="circle", 
+     vertex.size=((v.size)^0.5)*13, 
+     vertex.label.color="black", 
+     vertex.color=v.col,
+     #edge.color=E(t.graph)$color, ##do not need this since E(t.graph)$color is already defined.
+     edge.width=as.integer(cut(abs(E(t.graph)$V3), breaks = 5)))
+
+```
+
+
