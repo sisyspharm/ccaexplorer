@@ -1,0 +1,2234 @@
+---
+title: "CCA clinical sample TIGER (GSE76297) analysis"
+output: html_notebook
+---
+
+Download patient classification data
+```{r}
+# download patient classification
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq')
+
+df.ptclass <- read.csv('GSE76297_patient_classification.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Download extracted core genes from previous analysis using CCA cell lines
+```{r}
+# next we will subset Genes, Expression values and test for our predictive markers
+# download top predictive genes from previous analysis
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_S5A_files')
+# write.csv(SubTable3,file = 'Significant_Biomarkers_20Drugs_07082019_02.csv',quote = FALSE,row.names = FALSE)
+
+SigBioList <- read.csv('Sig_Biomarkers_AllDrugs_20191114.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# SigBioList <- SigBioList[-c(1:3),]
+# colnames(SigBioList) <- c('Gene','Drug')
+```
+
+```{r}
+require(tidyverse)
+SigGenes2 <- SigBioList %>% subset(Drug == 'Subtype_1.2')
+```
+
+Remove 1st row and change column header
+```{r}
+# note that the genes were ranked by Gini index
+# remove Gini column row
+
+topgenes <- SigGenes2$Gene
+```
+
+We will combine gene expression from patients with CCA cell lines.
+Download CCA cell line data
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_alldrugs_biomarkers')
+# dc <- read.csv('Expression_level_ALL_20191009.csv', header = TRUE, stringsAsFactors = FALSE)
+# dc <- read.csv('Expression_level_ALL_07042019.csv', header = TRUE, stringsAsFactors = FALSE)
+
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_alldrugs_biomarkers')
+dc <- read.csv('Expression_level_ALL_20191009.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Prepare CCA cell line gene expression data.
+```{r}
+# convert old CCA names to new CCA names
+from <- c('KKU.213','KKU.214','KKU.156','HuCCA.1','RBE','KKK.D138','HuH.28','KKU.055','KKU.100','KKK.D068','KKK.D131','HuCCT.1','SSP.25','TFK.1','YSCCC')
+
+to <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138','HuH-28','KKU-055','KKU-100','KKK-D068','KKK-D131','HuCCT-1','SSP-25','TFK-1','YSCCC')
+
+map <- setNames(to,from)
+
+# rename cell names in df.explevel
+ln.col <- length(colnames(dc))
+b <- lapply(1:ln.col, function(n) {
+  idx.name <- which(colnames(dc) %in% names(map))
+  if (n %in% idx.name){
+    a <- as.data.frame(dc[,c(n)])
+    colnames(a)[1] <- map[which(names(map) == colnames(dc)[n])]
+  } else {
+    a <- as.data.frame(dc[,c(n)])
+    colnames(a)[1] <- colnames(dc)[n]
+   }
+  return(a)
+})
+# c-bind data
+b.out <- do.call(cbind,b)
+# rename column
+colnames(b.out)[1] <- 'Gene'
+# reshape b.out
+df.cca <- reshape2::melt(b.out, id.vars = 'Gene', variable.name = 'Cell', value.name = 'Explevel')
+# assign Class according to Cell
+S1 <- c('KKU-213', 'KKU-214', 'KKU-156', 'HuCCA-1', 'RBE','KKK-D138')
+S2 <- c('TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+# subset data using Cells from S1 and S2
+df.cca <- df.cca %>% subset(Cell %in% c(S1,S2))
+# assign cell subtypes to CCA cell lines
+df.cca$Class <- ifelse(df.cca$Cell %in% S1,'CCA.Subgroup1','CCA.Subgroup2')
+
+# subset specific genes
+df.cca.sub <- df.cca #%>% subset(Gene %in% topgenes)
+
+# calculate mean of duplicated rows
+# df.cca.sub <- plyr::ddply(df.cca.sub, c('Gene','Cell','Class'), plyr::numcolwise(mean))
+
+# scale explevel per gene across patient samples
+scale_this <- function(x){
+  (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+}
+
+# rescale expression level of genes across cell lines
+df.b <- df.cca.sub %>% group_by(Gene) %>% mutate(scExplevel = scale_this(Explevel))
+# reshape data
+m.cca <- reshape2::dcast(df.b, Gene ~ Cell, value.var = 'scExplevel')
+# assign first column to rownames
+m.cca <- tibble::column_to_rownames(m.cca, var = 'Gene')
+cca <- m.cca
+```
+
+Download Jusakul et al. (2017) data
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_4_Prediction/SubClassMapping/input')
+
+expr.apinya <- read.csv('GSE89747_CCA_Processed.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# annotation.apinya <- read.csv('GSE89747_SampleID_Map.csv', header = TRUE, stringsAsFactors = FALSE)
+annotation.apinya <- read.csv('Apinya_clinical_data_tableS1.csv', header = TRUE, stringsAsFactors = FALSE)
+
+anno.apinya.convert <- read.csv('GSE89747_SampleID_Map.csv', header = FALSE, stringsAsFactors = FALSE)
+
+colnames(anno.apinya.convert) <- c('ID','Patient_ID')
+```
+
+Process expression data
+```{r}
+colnames(expr.apinya)[1] <- 'Gene'
+
+expr.apinya2 <- reshape2::melt(expr.apinya, id.vars = c('Gene'), variable.name = c('Patient'), value.name = 'expr')
+
+expr.apinya3 <- expr.apinya2 %>% group_by(Gene,Patient) %>% summarise(expr = mean(expr))
+
+expr.apinya4 <- reshape2::dcast(expr.apinya3, Gene ~ Patient, value.var = 'expr')
+
+expr.apinya4 <- tibble::column_to_rownames(expr.apinya4, var = 'Gene')
+# convert patient ID in Apinya's data
+# remove prefix X
+strx <- gsub('^X','',colnames(expr.apinya4))
+colnames(expr.apinya4) <- strx
+id.cols <- which(!is.na(match(colnames(expr.apinya4), anno.apinya.convert$ID)))
+# select non-NA column
+expr.apinya4 <- expr.apinya4 %>% dplyr::select(id.cols)
+colnames(expr.apinya4) <- anno.apinya.convert$Patient_ID[match(colnames(expr.apinya4), anno.apinya.convert$ID)]
+
+# expression data received from the author were normalized (probably to matched non-tumor controls)
+# scale gene expression by gene across samples
+ap <- tibble::rownames_to_column(expr.apinya4, var = 'Gene')
+app <- reshape2::melt(ap, id.vars = 'Gene', variable.name = 'Patient_ID', value.name = 'expr')
+
+# subset specific genes
+apinya <- app %>% group_by(Gene) %>% mutate(scexpr = scale_this(expr)) %>% 
+  # subset(Gene %in% topgenes) %>% 
+  reshape2::dcast(., Gene ~ Patient_ID, value.var = 'scexpr') %>% 
+  tibble::column_to_rownames(., var = 'Gene') 
+
+### Apinya
+anno.apinya <- annotation.apinya %>% dplyr::select(c('Sample.ID','Expanded.cluster'))
+anno.apinya$Expanded.cluster[anno.apinya$Expanded.cluster == 'N/A'] <- NA
+# remove NA rows
+# anno.apinya <- anno.apinya[-c(which(is.na(anno.apinya$Expanded.cluster))),]
+anno.apinya$Expanded.cluster <- as.numeric(anno.apinya$Expanded.cluster)
+# anno.apinya <- anno.apinya[!is.na(anno.apinya$Expanded.cluster),]
+# id rows
+id.rows <- anno.apinya$Sample.ID
+# create a vector
+subgroup.apinya <- anno.apinya$Expanded.cluster
+names(subgroup.apinya) <- anno.apinya$Sample.ID
+# make the format to fit with txt file
+txtformat.apinya <- data.frame('id' = names(subgroup.apinya),
+                            'subgroup' = subgroup.apinya
+                            )
+# subset data
+intersected.samples <- intersect(txtformat.apinya$id,colnames(apinya))
+
+apinya <- apinya[,c(which(colnames(apinya) %in% intersected.samples))]
+
+# 117 patients with RNA seq data
+# Add AREG TCOF1 TNFAIP2 TP53 = 0 to apinya data set
+extragenes <- matrix(data = 0, nrow = 4, ncol = ncol(apinya)) %>% as.data.frame()
+
+colnames(extragenes) <- colnames(apinya)
+rownames(extragenes) <- c('AREG','TCOF1','TNFAIP2','TP53')
+
+apinya <- rbind(apinya, extragenes)
+
+```
+
+We merege the data based matching rownames.
+```{r}
+# find common genes across 3 data sets
+# shared.genes <- intersect(rownames(tiger),rownames(apinya))
+# 
+# shared.genes <- intersect(shared.genes, rownames(cca))
+# only cca and apinya
+shared.genes <- intersect(rownames(apinya), rownames(cca))
+
+# Transform data from microarray in bead array in Apinya to RNA-seq in CCA using traning distribution matching (TDM).
+# Cross-platform normalization for microarray and RNA-seq data for machine learning application.
+# DOI: 10.7717/peerj.1621
+
+apinya2 <- apinya[c(which(rownames(apinya) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+cca2 <- cca[c(which(rownames(cca) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+
+# gene column must be 'gene'
+apinya.tdm <- TDM::tdm_transform(ref_data = data.table(cca2), target_data = data.table(apinya2))
+
+cca.tdm <- cca2 #TDM::tdm_transform(ref_data = data.table(apinya2), target_data = data.table(cca2))
+
+# add annotation
+apinya3 <- apinya.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'apinya')
+
+cca3 <- cca.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'cca')
+# tiger3 <- tiger.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'tiger')
+
+# merge to form a large matrix
+# only cca and apinya
+dat.tdm <- rbind(apinya3,cca3)
+
+dat.tdm$expr <- as.numeric(dat.tdm$expr)
+
+dat.tdm <- dat.tdm %>% mutate(subgroup = ifelse(dataset == 'cca' & ID %in% to[1:6], 'CCA1',
+                                ifelse(dataset == 'cca' & ID %in% to[7:15], 'CCA2', 'unk')))
+
+```
+
+Hierarchical clustering (41 genes) using gene expression levels form CCA patients and cell lines
+```{r}
+datin.expr <- dat.tdm %>% 
+  subset(gene %in% topgenes) %>% # select only candidate genes
+  reshape2::dcast(., ID ~ gene, value.var = 'expr') %>% tibble::column_to_rownames(., var = 'ID')
+
+```
+
+```{r}
+# use gene expression data
+dat.hc <- datin.expr
+
+hr <- hclust(dist(dat.hc, method = 'euclidean'), method = 'ward.D2')
+
+clusters.41 <- dendextend::cutree(hr, k = 2)
+
+# clusters only CCA cell lines
+datcca.hc <- dat.hc %>% subset(rownames(.) %in% to)
+
+hr.cca <- hclust(dist(datcca.hc, method = 'euclidean'), method = 'ward.D2')
+
+clusters.cca.41 <- dendextend::cutree(hr.cca, k = 2)
+# the order to CCA cells lines are the same
+
+clusters.cca.41
+```
+
+Test the previous SVM model vs. current hierarchical clustering
+```{r}
+# use PCA data (from dat.hc <- datin.expr)
+dat.hc.pca <- prcomp(dat.hc, scale. = FALSE)
+
+# calculate PoV
+PoV <- dat.hc.pca$sdev^2 / sum(dat.hc.pca$sdev^2)
+
+PoV <- formatC(PoV, format = "f", digits = 4) %>% as.numeric()
+PoV <- PoV * 100
+PoV[1:2]
+# report PC1 and PC2
+```
+
+```{r}
+cumsum(PoV)
+# report Cumulative PoV
+```
+
+```{r}
+# # examples from https://bioconductor.org/packages/release/bioc/vignettes/PCAtools/inst/doc/PCAtools.html
+# require(GEOquery)
+# # load series and platform data from GEO
+# gset <- getGEO('GSE2990', GSEMatrix = TRUE, getGPL = FALSE)
+# 
+# xgset <- exprs(gset[[1]])
+# 
+# # remove Affymetrix control probes
+# xxgset <- xgset[-grep('^AFFX', rownames(xgset)),]
+# 
+# # extract information of interest from the phenotype data (pdata)
+# idx <- which(colnames(pData(gset[[1]])) %in%
+#                c('age:ch1', 'distant rfs:ch1', 'er:ch1',
+#                  'ggi:ch1', 'grade:ch1', 'size:ch1',
+#                  'time rfs:ch1'))
+# 
+# metadata <- data.frame(pData(gset[[1]])[,idx],
+#                        row.names = rownames(pData(gset[[1]])))
+# 
+# # tidy column names
+# colnames(metadata) <- c('Age', 'Distant.RFS', 'ER', 'GGI', 'Grade',
+#                         'Size', 'Time.RFS')
+# 
+# # prepare certain phenotypes
+# metadata$Age <- as.numeric(gsub('^KJ', NA, metadata$Age))
+# metadata$Distant.RFS <- factor(metadata$Distant.RFS, levels=c(0,1))
+# metadata$ER <- factor(gsub('\\?', NA, metadata$ER), levels=c(0,1))
+# metadata$ER <- factor(ifelse(metadata$ER == 1, 'ER+', 'ER-'), levels = c('ER-', 'ER+'))
+# metadata$GGI <- as.numeric(metadata$GGI)
+# metadata$Grade <- factor(gsub('\\?', NA, metadata$Grade), levels=c(1,2,3))
+# metadata$Grade <- gsub(1, 'Grade 1', gsub(2, 'Grade 2', gsub(3, 'Grade 3', metadata$Grade)))
+# metadata$Grade <- factor(metadata$Grade, levels = c('Grade 1', 'Grade 2', 'Grade 3'))
+# metadata$Size <- as.numeric(metadata$Size)
+# metadata$Time.RFS <- as.numeric(gsub('^KJX|^KJ', NA, metadata$Time.RFS))
+# 
+# # remove samples from the pdata that have any NA value
+# discard <- apply(metadata, 1, function(x) any(is.na(x)))
+# 
+# metadata <- metadata[!discard,]
+# 
+# # filter the expression data to match the samples in our pdata
+# xxgset <- xxgset[,which(colnames(xxgset) %in% rownames(metadata))]
+# 
+# # check that sample names match exactly between pdata and expression data 
+# all(colnames(xxgset) == rownames(metadata))
+```
+
+```{r}
+# transform data frame from datin.expr TDM-normalized gene expression.
+# 45 genes
+dset <- t(datin.expr) %>% as.data.frame()
+```
+
+```{r}
+# load metadata
+clinical.data <- annotation.apinya
+# select columns
+clinical.data <- clinical.data[,c(1,2,3,4,6,11,12,13,14,22)]
+# rename columns
+colnames(clinical.data) <- c('ID','Fluke.Infection','Country','Sex','Anatomical.subtype','TNM.Stage','Stage','Vital.state','Survival.days','Cluster')
+
+# add predicted drug response subgroup
+# clinical.data$Drug.subgroup <- pt.CCA1$PredClass.2[match(clinical.data$ID, pt.CCA1$ID)]
+# clinical.data$Drug.subgroup <- y_auc$glm.pred.class[match(clinical.data$ID, y_auc$ID)]
+# turn to numeric
+clinical.data$Vital.state <- as.numeric(clinical.data$Vital.state)
+clinical.data$Survival.days <- as.numeric(clinical.data$Survival.days)
+clinical.data$Cluster <- as.numeric(clinical.data$Cluster)
+
+# separate T from TNM stage
+clinical.data$TNM <- substr(clinical.data$TNM.Stage,1,2)
+clinical.data$TNM <- ifelse(clinical.data$TNM == 'Ti', 'T0',
+                            ifelse(clinical.data$TNM == 'N/', NA, 
+                                   ifelse(clinical.data$TNM == 'Tx', NA, clinical.data$TNM)))
+
+# remove patients VitalState = NA, MolecularCluster = NA, TNM = NA
+clinical.data2 <- clinical.data %>% filter(!is.na(Vital.state) & !is.na(Cluster) & !is.na(TNM))
+
+# add CCA cell line metadata
+FlukeStatus.cca <-c('Fluke-pos','Fluke-pos','Fluke-pos','Fluke-pos','Fluke-neg','Fluke-pos',
+                    'Fluke-neg','Fluke-pos','Fluke-pos','Fluke-pos','Fluke-pos','Fluke-neg','Fluke-neg','Fluke-neg','Fluke-neg')
+
+Country.cca <- c('Thailand','Thailand','Thailand','Thailand','Japan','Thailand',
+                'Japan','Thailand','Thailand','Thailand','Thailand','Japan','Japan','Japan','Japan')
+```
+
+```{r}
+# make new clinical data table for CCA cell lines
+clinical.data.cca <- data.frame('ID' = to,
+                               'Fluke.Infection' = FlukeStatus.cca,
+                               'Country' = Country.cca,
+                               'Sex' = 'unk',
+                               'Anatomical.subtype' = 'unk',
+                               'TNM.Stage' = 'unk',
+                               'Stage' = 'unk',
+                               'Vital.state' = 'unk',
+                               'Survival.days' = 'unk',
+                               'Cluster' = 'unk',
+                               'TNM' = 'unk')
+```
+
+```{r}
+# put together
+clinical.data2 <- rbind(clinical.data2,clinical.data.cca)
+
+# add drug subtype
+clinical.data2$DrugSubtype <- ifelse(clinical.data2$ID %in% to[1:6], 'CCA1',
+                                     ifelse(clinical.data2$ID %in% to[7:15], 'CCA2','unk'))
+
+clinical.data2 <- tibble::column_to_rownames(clinical.data2, var = 'ID')
+```
+
+```{r}
+# filter the expression data to match the samples in our clinical.data2
+mysamples <- intersect(colnames(dset),rownames(clinical.data2))
+
+dset2 <- dset %>% dplyr::select(mysamples)
+
+# remove some samples in clinical.data2
+clinical.data3 <- clinical.data2 %>% subset(rownames(.) %in% mysamples)
+
+# rearrange columns of samples
+dset3 <- dset2[,rownames(clinical.data3)]
+
+# # check that sample names match exactly between pdata and expression data 
+all(colnames(dset3) == rownames(clinical.data3))
+```
+
+```{r}
+# subset only CCA data from both gene expression and clinical data
+dset.cca <- dset %>% t() %>% as.data.frame() %>% 
+  subset(rownames(.) %in% to)
+
+clinical.data.cca # <- clinical.data3 %>% subset(rownames(.) %in% to) %>% tibble::rownames_to_column(., var = 'ID')
+
+liver <- c('RBE','HuH-28','KKU-100','KKK-D138','KKK-D068','KKU-055','SSP-25')
+
+clinical.data.cca <- clinical.data.cca %>% 
+  mutate(OrganSubtype = case_when(ID %in% liver ~ 'Liver-like',
+                                  TRUE ~ 'Pancrease-like'),
+         DrugSubtype = case_when(ID %in% to[1:6] ~ 'CCA1',
+                                 TRUE ~ 'CCA2'))
+
+# add factor levels to clinical.data.cca
+clinical.data.cca$Fluke.Infection <- factor(clinical.data.cca$Fluke.Infection,
+                                            levels = c('Fluke-pos','Fluke-neg'))
+
+clinical.data.cca$Country <- factor(clinical.data.cca$Country,
+                                            levels = c('Thailand','Japan'))
+
+clinical.data.cca$DrugSubtype <- factor(clinical.data.cca$DrugSubtype,
+                                            levels = c('CCA1','CCA2'))
+
+clinical.data.cca$OrganSubtype <- factor(clinical.data.cca$OrganSubtype,
+                                         levels = c('Liver-like','Pancrease-like'))
+
+clinical.data.cca <- tibble::column_to_rownames(clinical.data.cca, var = 'ID')
+
+```
+
+Find VIP score using caret's random forest model
+```{r}
+# add drug response phenotypes to dset.cca
+cca.drug <- dset.cca
+cca.drug <- cca.drug %>% mutate(drugSubtype = case_when(rownames(.) %in% to[1:6] ~ 'CCA1',
+                                                        TRUE ~ 'CCA2'))
+# add factor level
+cca.drug$drugSubtype <- factor(cca.drug$drugSubtype, levels = c('CCA1','CCA2'))
+
+# add CCA cell line ID to rownames
+rownames(cca.drug) <- rownames(dset.cca)
+
+cca.drug <- as.data.frame(cca.drug)
+
+# split training and testing data set
+tally1 <- cca.drug %>% group_by(drugSubtype) %>% summarise(n = n()) %>% mutate(n80 = floor(n*0.8))
+
+# 80% of data from minimum population
+set.seed(100)
+
+trainingSet <- cca.drug %>% tibble::rownames_to_column(., var = 'ID') %>% 
+  group_by(drugSubtype) %>% 
+  sample_n(., size = min(tally1$n80)) %>% 
+  tibble::column_to_rownames(., var = 'ID')
+
+testingSet <- cca.drug %>% subset(!rownames(.) %in% rownames(trainingSet))
+
+```
+
+
+```{r}
+require(caret)
+set.seed(100)
+control <- trainControl(method = 'repeatedcv', # limit to 50-100 repeats
+                        number = 5, 
+                        repeats = 10)
+#Metric compare model is Accuracy
+# metric <- "Accuracy"
+
+#Number randomely variable selected is mtry
+mtry <- floor(sqrt(ncol(trainingSet)))
+ 
+tunegrid <- expand.grid(.mtry = mtry)
+
+rf_default <- train(drugSubtype ~ ., 
+                      data = trainingSet, 
+                      method  ='rf', 
+                      # metric = 'Accuracy', 
+                      tuneGrid = tunegrid, 
+                      trControl = control)
+
+```
+
+```{r}
+# test prediction accuracy of the rf model using 45 genes
+testResult <- predict(rf_default, 
+                      cca.drug[,-c(46)], 
+                      type = 'prob') %>% as.data.frame()
+
+testResult$pred <- ifelse(testResult$CCA1 > testResult$CCA2, 1,2) %>% as.factor()
+
+pred.roc <- testResult$pred %>% as.numeric()
+
+resp.roc <- ifelse(cca.drug$drugSubtype == 'CCA1',1,2) %>% as.numeric()
+
+roc0 <- pROC::roc(predictor = pred.roc,
+                  response = resp.roc)
+
+plot(roc0, print.thres = c(.5), type = "S",
+     print.thres.pattern = "%.3f (Spec = %.2f, Sens = %.2f)",
+     print.thres.cex = .8, 
+     legacy.axes = TRUE)
+
+```
+
+Extract Variable importance values from random forest model
+```{r}
+cca.drug.varimp <- caret::varImp(rf_default)$importance
+
+colnames(cca.drug.varimp) <- c('VIP.rf')
+
+# no coefficient can be extracted from random forest
+# as a result, we use linear regression model(s) to extract coefficients for each gene
+```
+
+Use PLS-DA (ropls package) to identify variable important values
+```{r}
+set.seed(100)
+# default is SIMPLS when n(samples) < n(predictors)
+ropls.plsda <- ropls::opls(trainingSet[,-c(46)], 
+                              trainingSet[,c(46)],
+                              # predI = 3
+                              # orthoI = 0
+                              )
+
+```
+
+Extract VIP scores from PLS-DA
+```{r}
+cca.drug.varimpPLSDA <- ropls::getVipVn(ropls.plsda) %>% as.data.frame()
+colnames(cca.drug.varimpPLSDA) <- 'VIP'
+
+coef <- as.data.frame(ropls.plsda@coefficientMN) 
+
+cca.drug.varimpPLSDA$Coef <- coef$y1[match(rownames(cca.drug.varimp),rownames(coef))]
+
+# add to cca.drug.varimp
+cca.drug.varimp$VIP.plsda.ropls <- cca.drug.varimpPLSDA$VIP[match(rownames(cca.drug.varimp),rownames(cca.drug.varimpPLSDA))]
+
+cca.drug.varimp$Coef.plsda.ropls <- cca.drug.varimpPLSDA$Coef[match(rownames(cca.drug.varimp),rownames(cca.drug.varimpPLSDA))]
+
+```
+
+Use plsda (mixOmics package) to find VIP and coef
+```{r}
+set.seed(100)
+mixomics.plsda <- mixOmics::plsda(X = trainingSet[,-c(46)], 
+                                  Y = trainingSet[,c(46)],
+                                  ncomp = 2
+)
+
+# extract coefficient values
+cca.drug.varimpmixOmics <- mixOmics::selectVar(mixomics.plsda, comp = 1)$value
+colnames(cca.drug.varimpmixOmics) <- 'Coef'
+# extract VIP scores from mixOmics' plsda
+VIP <- mixOmics::vip(mixomics.plsda) %>% as.data.frame()
+# add VIP of comp 1 to the table
+cca.drug.varimpmixOmics$VIP <- VIP$comp1[match(rownames(cca.drug.varimpmixOmics),rownames(VIP))]
+
+# add to main table
+cca.drug.varimp$VIP.plsda.mixomics <- cca.drug.varimpmixOmics$VIP[match(rownames(cca.drug.varimp), rownames(cca.drug.varimpmixOmics))]
+
+cca.drug.varimp$Coef.plsda.mixomics <- cca.drug.varimpmixOmics$Coef[match(rownames(cca.drug.varimp), rownames(cca.drug.varimpmixOmics))]
+```
+
+Plot VIP from random forest, ropls' PLS-DA, and mixOmics' PLS-DA
+```{r}
+# cca.drug.varimp <- tibble::column_to_rownames(cca.drug.varimp,var = 'Gene')
+
+VIPdat <- cca.drug.varimp %>% dplyr::select(VIP.rf,VIP.plsda.mixomics,VIP.plsda.ropls)
+
+# VIPdat <- reshape2::melt(VIPdat, id.var = 'Gene', variable.name = 'Model', value.name = 'VIP.score')
+
+VIPdat.cor <- Hmisc::rcorr(as.matrix(VIPdat),type = 'pearson')
+
+corrplot::corrplot(VIPdat.cor$r, 
+                   type = 'upper',
+                   order = 'hclust',
+                   p.mat = VIPdat.cor$P,
+                   addCoef.col = 'white',
+                   sig.level = 0.05,
+                   insig = 'blank')
+
+```
+
+Plot Coef from ropls' PLS-DA, and mixOmics' PLS-DA
+```{r}
+# cca.drug.varimp <- tibble::column_to_rownames(cca.drug.varimp,var = 'Gene')
+
+Coefdat <- cca.drug.varimp %>% dplyr::select(Coef.plsda.mixomics,Coef.plsda.ropls)
+
+# VIPdat <- reshape2::melt(VIPdat, id.var = 'Gene', variable.name = 'Model', value.name = 'VIP.score')
+
+Coefdat.cor <- Hmisc::rcorr(as.matrix(Coefdat),type = 'pearson')
+
+corrplot::corrplot(Coefdat.cor$r, 
+                   type = 'upper',
+                   order = 'hclust',
+                   p.mat = Coefdat.cor$P,
+                   addCoef.col = 'white',
+                   sig.level = 0.05,
+                   insig = 'blank')
+
+```
+
+Save table of VIP scores and Coef values for Figure 4A
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# write.csv(cca.drug.varimp, file = 'Table_VIPandCoef_20200331.csv', row.names = TRUE)
+
+```
+
+To answer the question: Do these biomarkers specific to cell lines' phenotype such as drug response, organ status, OV-infection, we use PLS-DA to find PCs and their percent of variance explained. 
+
+```{r}
+# use 15 cell lines in the analysis
+datpheno <- cca.drug
+
+clinical.data.cca <- tibble::rownames_to_column(clinical.data.cca, var = 'ID')
+
+# add more metadata from clinical.data.cca table
+datpheno$organSubtype <- clinical.data.cca$OrganSubtype[match(rownames(datpheno),clinical.data.cca$ID)]
+datpheno$OVSubtype <- clinical.data.cca$Fluke.Infection[match(rownames(datpheno),clinical.data.cca$ID)]
+
+# add factor levels
+datpheno$organSubtype <- factor(datpheno$organSubtype, levels = c('Liver-like','Pancrease-like'))
+datpheno$OVSubtype <- factor(datpheno$OVSubtype, levels = c('Fluke-pos','Fluke-neg'))
+
+# use mixOmics' PLS-DA 
+set.seed(100)
+# Drug subtype
+plsr.drug <- mixOmics::plsda(X = datpheno[,-c(46,47,48)], 
+                             Y = datpheno[,c(46)],
+                             ncomp = 15)
+
+# Organ subtype
+plsr.organ <- mixOmics::plsda(X = datpheno[,-c(46,47,48)], 
+                              Y = datpheno[,c(47)],
+                              ncomp = 15)
+
+# OV-infection 
+plsr.ov <- mixOmics::plsda(X = datpheno[,-c(46,47,48)], 
+                           Y = datpheno[,c(48)],
+                           ncomp = 15)
+
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.drug)
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.organ)
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.ov)
+```
+
+Use ropls package to obtain quality of prediction (Q2)
+```{r}
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.drug <- ropls::opls(datpheno[,-c(46,47,48)], 
+                         datpheno[,c(46)])
+```
+
+```{r}
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.organ <- ropls::opls(datpheno[,-c(46,47,48)], 
+                          datpheno[,c(47)])
+```
+
+```{r}
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.ov <- ropls::opls(datpheno[,-c(46,47,48)], 
+                       datpheno[,c(48)])
+```
+
+Plot quality of prediction (Q-squared) of using 45 genes to predict drug subtype, organ subtype and OV-infection of CCA cell lines
+```{r}
+# extract Q2
+sumDF <- rbind(opls.drug@summaryDF,
+      opls.organ@summaryDF,
+      opls.ov@summaryDF)
+rownames(sumDF) <- c('Drug','Organ','OV')
+sumDF <- tibble::rownames_to_column(sumDF, var = 'Phenotype')
+# add factor level to phenotyps
+sumDF$Phenotype <- factor(sumDF$Phenotype, levels = c('Drug','Organ','OV'))
+# plot Quality of prediction as bar plot
+
+require(ggpubr)
+
+figQ2a <- ggplot(sumDF,
+                aes(x = Phenotype,
+                    y = `Q2(cum)`)) +
+  geom_col(fill = 'black') +
+  ylim(0,1) +
+  theme_pubr() +
+  labs(y = 'Quality of prediction (q2)',
+       x = '')
+
+figQ2a
+```
+
+Save Figure S6G
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# ggsave(figQ2,
+#        filename = 'Figure_Q2a_Predict_Phenotype_20200331.pdf', 
+#        height = 3,
+#        width = 2.5, 
+#        units = 'in',
+#        device = cairo_pdf)
+```
+
+Is 45 gene set predict better than a whole gene set?
+```{r}
+cca.whole <- dat.tdm %>% subset(dataset == 'cca')
+
+cca.whole <- reshape2::dcast(cca.whole, ID ~ gene, value.var = 'expr', fun.aggregate = mean)
+
+cca.whole <- tibble::column_to_rownames(cca.whole, var = 'ID')
+
+# add metadata
+cca.whole$drugSubtype <- clinical.data.cca$DrugSubtype[match(rownames(cca.whole),clinical.data.cca$ID)]
+cca.whole$organSubtype <- clinical.data.cca$OrganSubtype[match(rownames(cca.whole),clinical.data.cca$ID)]
+cca.whole$OVSubtype <- clinical.data.cca$Fluke.Infection[match(rownames(cca.whole),clinical.data.cca$ID)]
+
+# add factor level
+cca.whole$drugSubtype <- factor(cca.whole$drugSubtype, levels = c('CCA1','CCA2'))
+cca.whole$organSubtype <- factor(cca.whole$organSubtype, levels = c('Liver-like','Pancrease-like'))
+cca.whole$OVSubtype <- factor(cca.whole$OVSubtype, levels = c('Fluke-pos','Fluke-neg'))
+
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.drug.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                            cca.whole[,c(10762)])
+```
+
+```{r}
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.organ.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                             cca.whole[,c(10763)])
+```
+
+```{r}
+set.seed(100)
+# by default, Cross-validation = 7, algorithm = NIPALS
+opls.ov.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                          cca.whole[,c(10764)])
+```
+
+```{r}
+# extract Q2
+sumDF.w <- rbind(opls.drug.w@summaryDF,
+                 opls.organ.w@summaryDF,
+                 opls.ov.w@summaryDF)
+rownames(sumDF.w) <- c('Drug','Organ','OV')
+sumDF.w <- tibble::rownames_to_column(sumDF.w, var = 'Phenotype')
+# add factor level to phenotyps
+sumDF.w$Phenotype <- factor(sumDF.w$Phenotype, levels = c('Drug','Organ','OV'))
+
+# combine together
+sumDF$model <- 'Biomarkers'
+sumDF.w$model <- 'All'
+
+# combine two summary tables
+sumDF.all <- rbind(sumDF,sumDF.w)
+
+# add factor level to model
+sumDF.all$model <- factor(sumDF.all$model, levels = c('Biomarkers','All'))
+
+# tweak non-significant model
+sumDF.all$`Q2(cum)` <- ifelse(sumDF.all$pQ2 > 0.05, 0.005, sumDF.all$`Q2(cum)`)
+
+# plot Quality of prediction as bar plot
+require(ggpubr)
+
+figQ2 <- ggplot(sumDF.all,
+       aes(x = Phenotype,
+           y = `Q2(cum)`,
+           fill = model)) +
+  geom_col(position = position_dodge2()) +
+  geom_hline(yintercept = 0.005, color = 'black',lty = 'dotted') +
+  scale_fill_manual(values = c('Biomarkers' = 'black',
+                               'All' = 'gray50')) +
+  ylim(0,1) +
+  theme_pubr() +
+  theme(
+    legend.position = 'right'
+  ) +
+  labs(y = 'Quality of prediction (q2)',
+       x = '')
+
+figQ2
+```
+
+Save Figure S6G
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+ggsave(figQ2,
+       filename = 'Figure_Q2_Predict_Phenotype_20200331.pdf', 
+       height = 3,
+       width = 4, 
+       units = 'in',
+       device = cairo_pdf)
+```
+ 
+
+Use PCA (PCAtools package)
+```{r}
+require(PCAtools)
+# input data set = normalized gene expression of CCA cell lines
+p <- PCAtools::pca(dset.cca, metadata = clinical.data.cca)
+
+screeplot(p)
+```
+
+```{r}
+biplot(p)
+```
+
+```{r}
+pairsplot(p)
+```
+
+```{r}
+plotloadings(p,
+             components = getComponents(p,1:6))
+```
+
+```{r}
+eigencorplot(p,
+             metavars = c('Fluke.Infection','DrugSubtype','OrganSubtype'))
+```
+
+```{r}
+# find elbow using horn method
+horn <- parallelPCA(dset.cca)
+
+horn$n
+```
+
+```{r}
+# find elbow using elbow method
+elbow <- findElbowPoint(p$variance)
+
+elbow
+```
+
+Save individual-sample biplot (FigS6F)
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+pdf(paste0('FigS6F_20200315.pdf'),
+    height = 4.5,
+    width = 6)
+biplot(p,
+       lab = rownames(p$metadata),
+       colby = 'DrugSubtype',
+       hline = 0, 
+       vline = 0,
+       legendPosition = 'right') +
+  scale_color_manual(values = c('CCA1' = 'orange', 'CCA2'= 'cyan'))
+  
+
+# draw(fig5B,
+#      height = unit(5,'in'),
+#      width = unit(14,'in')
+#      )
+
+dev.off()
+```
+
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+pdf(paste0('FigS6G_20200315.pdf'),
+    height = 4.5,
+    width = 6)
+
+eigencorplot(p,
+             components = getComponents(p, 1:elbow),
+             metavars = c('Fluke.Infection','OrganSubtype','DrugSubtype'),
+             col = c('white', 'cornsilk1', 'gold', 'forestgreen', 'darkgreen'),
+             cexCorval = 1.2,
+             fontCorval = 2,
+             posLab = 'all',
+             rotLabX = 45,
+             scale = TRUE,
+             main = bquote(Principal ~ component ~ Pearson ~ r^2 ~ clinical ~ correlates),
+             plotRsquared = TRUE,
+             corFUN = 'pearson',
+             corUSE = 'pairwise.complete.obs',
+             signifSymbols = c('****', '***', '**', '*', ''),
+             signifCutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1))
+
+dev.off()
+```
+
+```{r}
+# check internal consistency
+require(ltm)
+cronbach.alpha(t(p$loadings[1:elbow]))
+
+# build coef form loading scores PC1-PC6
+mc <- rowSums(p$loadings[1:elbow]) %>% as.data.frame()
+
+mc <- tibble::rownames_to_column(mc, var = 'Gene')
+
+colnames(mc) <- c('Gene','Coeff')
+
+mc.incept <- data.frame('Gene' = '(intercept)',
+                        'Coeff' = 0)
+
+pca.coeff <- rbind(mc.incept,mc)
+
+```
+
+Check values using different R packages
+```{r}
+# compare to prcomp()
+require(FactoMineR)
+pp <- PCA(t(dset.cca),scale.unit = TRUE,graph = TRUE)
+```
+
+Save eigenloading plot (FigS6E)
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+pdf(paste0('FigS6E_20200315.pdf'),
+    height = 4.5,
+    width = 6)
+
+dev.off()
+```
+
+
+```{r}
+# get eigenvalues
+require(factoextra)
+eig.val <- get_eigenvalue(pp)
+
+eig.val
+```
+
+```{r}
+# scree plot
+fviz_eig(pp, addlabels = TRUE, ylim = c(0, 100))
+
+```
+
+```{r}
+fviz_pca_var(pp, col.var = "black")
+```
+
+```{r}
+# Total cos2 of variables on Dim.1 and Dim.2
+fviz_cos2(pp, choice = "var", axes = 1:2)
+```
+
+```{r}
+# save quality of representation of genes in PC1 and PC2
+# quality of representation = importance of the genes in principle components
+
+ppcos2 <- pp$var$cos2 %>% as.data.frame()
+
+ppcos2 <- tibble::rownames_to_column(ppcos2, var = 'Gene')
+
+ppcos2$Dim.1.2 <- rowSums(ppcos2[,2:3])
+
+ppcos2$Dim.1.cor <- pp$var$cor[,1]
+
+ppcos2$group <- ifelse(ppcos2$Dim.1.cor < 0, 'PC2','PC1') %>% as.factor()
+
+ppcos2 <- ppcos2 %>% arrange(group,-Dim.1.2)
+
+ppcos2$Gene <- factor(ppcos2$Gene, levels = ppcos2$Gene)
+
+require(ggpubr)
+
+ggplot(ppcos2,
+       aes(x = Gene,
+           y = Dim.1.2,
+           fill = group)) +
+  geom_bar(stat = 'identity',position = 'dodge') +
+  scale_fill_manual(values = c('PC1' = 'orange', 'PC2' = 'cyan')) +
+  theme_pubclean() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  labs(x = 'Gene',
+       y = 'Cos2 score (PC1+PC2)')
+```
+
+
+```{r}
+fviz_pca_ind(pp, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+```
+
+Prepare table of CCA patients and their predicted drug responses that give significant value (p < 0.05)
+```{r}
+known.class <- pt.CCA1
+colnames(known.class)[4] <- 'glm.pred.class'
+colnames(known.class)[8] <- 'glm2.pred.class'
+
+known.class$glm.pred.class <- dat.crs$PredClass.2[match(known.class$ID, dat.crs$ID)]
+
+known.class$glm.pred.class <- ifelse(known.class$glm.pred.class == 'CCA1',1,2)
+known.class$glm2.pred.class <- ifelse(known.class$glm2.pred.class == 'CCA1',1,2)
+
+```
+
+
+These results are in agreement with gene expression levels (Figure 4A), indicating the important of each gene based on cos2 from PC1-2.
+
+```{r}
+require(mixOmics)
+dset.cca <- cca %>% subset(rownames(.) %in% topgenes)
+
+# define Y values
+dset.cca.Y <- ifelse(colnames(dset.cca) %in% to[1:6], 'CCA1','CCA2') %>% as.factor()
+
+# 45 genes
+dset.plsda <- mixOmics::plsda(X = t(dset.cca),
+                              Y = dset.cca.Y,
+                              ncomp = 2,
+                              mode = 'regression',
+                              max.iter = 100)
+
+
+background <- mixOmics::background.predict(dset.plsda, 
+                                 comp.predicted = 2,
+                                 dist = "max.dist") 
+
+mixOmics::plotIndiv(dset.plsda, 
+          comp = 1:2, 
+          group = dset.cca.Y,
+          ind.names = FALSE, 
+          title = "Max distance",
+          legend = TRUE,  
+          background = background)
+```
+
+```{r}
+# use CCA cell lines gene expression as a testing set.
+dset.test <- t(dset.cca)
+# then predict
+dset.predict <- stats::predict(dset.plsda, dset.test, dist = "max.dist")
+# store prediction for the 4th component
+dset.prediction <- dset.predict$MajorityVote$max.dist[,1]
+# calculate the error rate of the model
+cca.prediction <- dset.prediction[names(dset.prediction) %in% to]
+
+to.truth <- c(rep('CCA1',6),rep('CCA2',9))
+
+names(to.truth) <- to
+
+# build dataframe
+confmat <- data.frame('ID' = names(cca.prediction))
+confmat <- confmat %>% mutate(Predict = cca.prediction[match(ID,names(cca.prediction))],
+                              Truth = to.truth[match(ID,names(to.truth))])
+
+# add factor levels
+confmat$Predict <- factor(confmat$Predict, levels = c('CCA1','CCA2'))
+confmat$Truth <- factor(confmat$Truth, levels = c('CCA1','CCA2'))
+
+caret::confusionMatrix(data = confmat$Predict, reference = confmat$Truth)
+
+```
+
+```{r}
+plsdacoef <- mixOmics::selectVar(dset.plsda, comp = 1)$value %>% as.data.frame()
+
+plsdacoef <- tibble::rownames_to_column(plsdacoef, var = 'Gene')
+
+colnames(plsdacoef) <- c('Gene','Coeff')
+
+myintercept <- data.frame('Gene' = '(intercept)',
+                          'Coeff' = 0)
+
+plsdacoef <- rbind(myintercept, plsdacoef)
+```
+
+
+```{r}
+y_auc.plsda <- data.frame('ID' = names(dset.prediction),
+                          'glm.pred.class' = dset.prediction)
+
+y_auc.plsda$glm.pred.class <- ifelse(y_auc.plsda$glm.pred.class == 'CCA1',1,2)
+
+```
+
+Try random forest
+```{r}
+require(caret)
+trControl <- caret::trainControl(method = 'LOOCV', 
+                                 number = 10,
+                                 allowParallel = TRUE, 
+                                 verboseIter = FALSE)
+
+# # dset.train is gene expression data
+# dset.train.pca <- prcomp(dset.train,scale. = TRUE)
+
+dset.cca <- dset.train %>% subset(rownames(.) %in% to) %>% as.data.frame()
+
+dset.cca$class <- ifelse(rownames(dset.cca) %in% to[1:6],'CCA1','CCA2') %>% as.factor()
+
+dset.rf <- caret::train(x = dset.cca[,-c(which(colnames(dset.cca) == 'class'))],
+                        y = dset.cca[,c(which(colnames(dset.cca) == 'class'))], 
+                        method = 'rf', 
+                        prox = FALSE, 
+                        trControl = trControl)
+
+dset.test.cca <- dset.train %>% subset(rownames(.) %in% to) %>% as.data.frame()
+
+dset.class.cca <- caret::predict.train(object = dset.rf,
+                                       newdata = dset.test.cca,
+                                       type = 'prob')
+
+dset.class.cca$class <- ifelse(dset.class.cca$CCA1 > dset.class.cca$CCA2,'CCA1','CCA2') %>% as.factor()
+
+caret::confusionMatrix(data = dset.class.cca$class, reference = dset.cca$class)
+
+```
+
+```{r}
+varimp.rf <- caret::varImp(dset.rf,scale = TRUE)
+
+varimp.rf.list <- as.data.frame(varimp.rf$importance)
+varimp.rf.list <- tibble::rownames_to_column(varimp.rf.list,var = 'Gene')
+
+# varimp.rf.list <- varimp.rf.list %>% subset(Overall > 0)
+
+```
+
+```{r}
+dset.pls <- caret::train(x = dset.cca[,-c(which(colnames(dset.cca) == 'class'))],
+                         y = dset.cca[,c(which(colnames(dset.cca) == 'class'))], 
+                         method = 'pls',
+                         trControl = trControl)
+
+dset.test.cca <- dset.train %>% subset(rownames(.) %in% to) %>% as.data.frame()
+
+dset.class.cca <- caret::predict.train(object = dset.pls,
+                                       newdata = dset.test.cca,
+                                       type = 'prob')
+
+dset.class.cca$class <- ifelse(dset.class.cca$CCA1 > dset.class.cca$CCA2,'CCA1','CCA2') %>% as.factor()
+
+caret::confusionMatrix(data = dset.class.cca$class, reference = dset.cca$class)
+
+```
+
+```{r}
+varimp.pls <- caret::varImp(dset.pls,scale = TRUE)
+
+varimp.pls.list <- as.data.frame(varimp.pls$importance)
+
+colnames(varimp.pls.list) <- 'Overall'
+
+# rownames(varimp.pls.list) <- rownames(varimp.pls$importance)
+
+varimp.pls.list <- tibble::rownames_to_column(varimp.pls.list,var = 'Gene')
+
+# varimp.pls.list <- varimp.pls.list %>% subset(Overall > 0)
+
+```
+
+```{r}
+# plot varimp.rf vs. varimp.pls
+
+varimp.rf.list$model <- 'rf'
+varimp.pls.list$model <- 'pls'
+
+varimp.all <- rbind(varimp.pls.list,varimp.rf.list)
+
+require(reshape2)
+
+varimp.all <- dcast(varimp.all, Gene ~ model, value.var = 'Overall')
+
+ggplot(varimp.all,
+       aes(x = pls,
+           y = rf)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0,lty = 'dotted')
+
+```
+
+Select genes based on varimp and performance
+```{r}
+# use same trControl
+# Y input
+dset.gene.y <- dset.cca[,c(which(colnames(dset.cca) == 'class'))]
+
+# rearrange gene by VarImp
+gene.set <- varimp.all %>% arrange(-rf) %>% subset(rf > 0)
+
+# test set using CCA cell line
+dset.test.cca <- dset.train %>% subset(rownames(.) %in% to) %>% as.data.frame()
+
+gene.auc <- 0.5
+
+myauc <- lapply(1:nrow(gene.set), function(n) {
+  
+    # test 
+    # n <- 1
+    
+    # select gene set. The list will continue to grow
+    gene.input <- gene.set$Gene[1:n]
+    
+    # select expression data based on gene
+    dset.gene.x <- dset.cca %>% dplyr::select(all_of(gene.input))
+    
+    # build model for prediction
+    gene.rf <- caret::train(x = dset.gene.x,
+                            y = dset.gene.y, 
+                            method = 'rf', 
+                            prox = FALSE, 
+                            trControl = trControl)
+    
+    # test prediction power of the model
+    pred.prob <- caret::predict.train(object = gene.rf,
+                                      newdata = dset.test.cca, 
+                                      type = 'prob')
+    
+    result.roc <- pROC::roc(dset.gene.y, pred.prob$CCA1) # Draw ROC curve.
+    
+    # report ROC
+    gene.auc <- result.roc$auc
+    
+    out <- data.frame('GeneNo' = n,
+                      'AUC' = gene.auc)
+    
+    return(out)
+})
+
+auc.report <- do.call(rbind,myauc)
+
+```
+
+```{r}
+dset.test.pt <- dset.train %>% subset(!rownames(.) %in% to) %>% as.data.frame()
+
+dset.class.pt <- caret::predict.train(object = dset.pls,
+                                      dset.test.pt,
+                                      type = "raw")
+
+y_auc.rf <- data.frame('ID' = c(rownames(dset.test.pt),rownames(dset.test.cca)),
+                       'glm.pred.class' = c(dset.class.pt,dset.class.cca))
+
+y_auc.rf$glm.pred.class <- ifelse(y_auc.rf$glm.pred.class == 'CCA1',1,2)
+
+```
+
+```{r}
+PredSVM <- predict(modelSvmRRB, newdata = pred.cca, type = 'prob') %>% as.data.frame()
+```
+
+```{r}
+# build model-predict class
+require(glmnet)
+
+# input from gene expression
+Xcca <- datin.pca %>% subset(rownames(.) %in% to)
+  
+ycca <- data.frame('ID' = to,
+                     'drug.class' = c(1,1,1,1,1,1,2,2,2,2,2,2,2,2,2)) %>% 
+  tibble::column_to_rownames(., var = 'ID')
+
+Xcca$drug.class <- ycca$drug.class[match(rownames(Xcca),rownames(ycca))]
+
+lambda <- 10^seq(10, -2, length = 100)
+
+# set.seed(10)
+fit.cca <- glmnet(as.matrix(Xcca[,-c(42)]), 
+                  as.matrix(Xcca[,c(42)]), 
+                  family = 'binomial', 
+                  alpha = 1,
+                  lambda = lambda)
+
+plot(fit.cca, label = TRUE)
+```
+
+```{r}
+# set.seed(10)
+cvfit.cca <- cv.glmnet(as.matrix(Xcca[,-c(42)]), as.matrix(Xcca[,c(42)]), alpha = 1)
+
+cvfit.cca$lambda.1se
+
+plot(cvfit.cca)
+```
+
+```{r}
+coef(fit.cca, s = cvfit.cca$lambda.1se)
+```
+
+Use Patient CCA
+```{r}
+# ypt <- summary.drug  %>% dplyr::select(ID,Cluster) %>%
+#   tibble::column_to_rownames(., var = 'ID')
+# 
+# colnames(ypt) <- 'drug.class'
+# 
+# # add pre-determined drug classes
+# ypt$drug.class <- ifelse(ypt$drug.class == 'CCA1',1,2)
+
+ypt <- data.frame('ID' = names(clusters.41),
+                  'drug.class.hc' = clusters.41)
+# # add drug classes from hierarchical clustering
+# ypt$drug.class.hc <- clusters.41[match(rownames(ypt),names(clusters.41))]
+
+# # add CCA cell line data
+# ycca <- data.frame('ID' = to,
+#                    # 'drug.class' = c(1,1,1,1,1,1,2,2,2,2,2,2,2,2,2),
+#                    'drug.class.hc' = c(1,1,1,1,1,1,2,2,2,2,2,2,2,2,2))
+
+# ycca <- tibble::column_to_rownames(ycca, var = 'ID')
+
+# ypt <- rbind(ypt,ycca)
+
+# input from gene expression
+# not include CCA cell lines
+Xpt <- datin.pca # %>% subset(!rownames(.) %in% to)
+
+# use drug classes from hierarchical clustering
+Xpt$drug.class <- ypt$drug.class.hc[match(rownames(Xpt),rownames(ypt))]
+
+# remove patients with no Cluster assignment
+Xpt <- Xpt[!is.na(Xpt$drug.class),]
+
+# remove non-Asian patients
+nonAsian <-  which(grepl('RO|FR',rownames(Xpt)) == TRUE)
+
+Xpt <- Xpt[-c(nonAsian),]
+
+lambda <- 10^seq(10, -2, length = 100)
+
+# lambdas <- 10^seq(3, -2, by = -.1)
+
+# set.seed(100)
+fit.pt <- glmnet(as.matrix(Xpt[,-c(42)]), 
+                 as.matrix(Xpt[,c(42)]), 
+                 family = 'binomial',
+                 alpha = 0,
+                 lambda = lambda)     # alpha = 0; use ridge; no shrinkage of variables
+
+plot(fit.pt, label = TRUE)
+
+```
+
+```{r}
+# set.seed(100)
+cvfit.pt <- cv.glmnet(as.matrix(Xpt[,-c(42)]), as.matrix(Xpt[,c(42)]), alpha = 0,lambda = lambda)
+
+cvfit.pt$lambda.1se
+
+plot(cvfit.pt)
+```
+
+```{r}
+coef(fit.pt, s = cvfit.pt$lambda.1se)
+```
+
+Extract coefficients for ridge regression model using CCA patients as an input data vs their drug classes predicted by hierarchical clustering
+```{r}
+# best lambda
+bestlam <- cvfit.cca$lambda.1se
+
+mycoef <- predict(fit.cca, type = "coefficients", s = bestlam)
+
+mycoef <- as.matrix(mycoef) %>% as.data.frame() %>% 
+  tibble::rownames_to_column(., var = 'Gene')
+
+colnames(mycoef) <- c('Gene','Coeff')
+
+mycoef
+```
+
+Save coefficient values
+```{r}
+setwd('C:/Users/patipark/Downloads')
+# write.csv(ridge.coef, file = 'Coeff_RidgeRegression_20200227.csv',row.names = FALSE)
+mycoef <- read.csv('Coeff_RidgeRegression_20200227.csv',header = TRUE,stringsAsFactors = FALSE)
+```
+
+Classify patients using the coefficient
+```{r}
+#test set
+newX <- as.matrix(t(dset3)) #as.matrix(datin.pca)
+
+mybeta <- mycoef
+
+# TP53 = -0.143
+
+# separate coef rows and intercept row
+intercept <- mybeta[1,2]
+beta <- mybeta[c(-1),] %>% as.data.frame()
+
+require(reshape2)
+
+myX <- tibble::rownames_to_column(as.data.frame(newX), var = 'ID')
+myX <- melt(myX, id.vars = 'ID', variable.name = 'Gene', value.name = 'expr')
+
+# for each patient
+myID <- unique(myX$ID)
+
+pred.table <- lapply(1:length(myID), function(i) {
+  
+  myIDX <- myX %>% subset(ID %in% myID[i])
+  
+  myIDX$Coef <- beta$Coeff[match(myIDX$Gene,beta$Gene)]
+  
+  myIDX <- myIDX %>% mutate(Pred = (Coef * expr))
+  
+  # intercept <- 1.074270587
+  
+  pred.val <- log(intercept) + sum(myIDX$Pred)
+  
+  out <- data.frame('ID' = myID[i],
+                    'response' = pred.val)
+  
+  return(out)
+})
+
+pred.table <- do.call(rbind,pred.table)
+
+pred.table$glm.pred.class <- ifelse(pred.table$response >= 0, 2, 1)
+
+y_auc <- pred.table
+
+y_auc <- tibble::column_to_rownames(y_auc, var = 'ID')
+
+# find cut-off based on CCA2
+cutoff.auc <- y_auc %>% subset(rownames(.) %in% to)
+
+cutoff.auc$drug.class <- ifelse(rownames(cutoff.auc) %in% to[1:6],1,2)
+
+cutoff.auc <- cutoff.auc %>% group_by(drug.class) %>% summarise(mean = mean(response),
+                                                                sd = sd(response))
+
+cf.point <- cutoff.auc$mean[2] #- (1*cutoff.auc$sd[2])
+###
+
+y_auc <- tibble::rownames_to_column(y_auc, var = 'ID')
+
+y_auc <- y_auc %>% mutate(glm2.pred.class = if_else(response >= cf.point,2,1))
+
+# any samples whose value is above cf.point is labeled as 2
+# y_auc.pt <- y_auc %>% subset(!ID %in% to) %>% mutate(glm2.pred.class = if_else(response > cf.point,2,1))
+# 
+# y_auc.cca <- y_auc %>% subset(ID %in% to) %>% mutate(glm2.pred.class = glm.pred.class)
+# 
+# y_auc <- rbind(y_auc.pt,y_auc.cca)
+
+# calculate R-squared using
+rsquare <- function(true, predicted) {
+  sse <- sum((predicted - true)^2)
+  sst <- sum((true - mean(true))^2)
+  rsq <- 1 - sse / sst
+
+  # For this post, impose floor...
+  if (rsq < 0) rsq <- 0
+
+  return (rsq)
+}
+
+cca.set <- y_auc %>% subset(ID %in% to)
+
+cca.true <- cca.set$glm.pred.class
+names(cca.true) <- cca.set$ID
+
+cca.pred <- cca.set$glm2.pred.class
+names(cca.pred) <- cca.set$ID
+
+rr.model <- rsquare(cca.true,cca.pred)
+
+```
+
+```{r}
+setwd('C:/Users/patipark/Downloads')
+
+suminput <- read.csv('SummaryData.csv',header = TRUE, stringsAsFactors = FALSE)
+
+```
+
+Create clinical data of CCA patients
+```{r}
+# y_auc <- known.class
+patient.list <- colnames(dset.pt)
+
+clinical.data <- annotation.apinya %>% subset(Sample.ID %in% patient.list)
+# select columns
+clinical.data <- clinical.data[,c(1,2,3,4,6,11,12,13,14,22)]
+# rename columns
+colnames(clinical.data) <- c('ID','Fluke.Infection','Country','Sex','Anatomical.subtype','TNM.Stage','Stage','Vital.state','Survival.days','Cluster')
+
+# add predicted drug response subgroup
+# clinical.data$Drug.subgroup <- pt.CCA1$PredClass.2[match(clinical.data$ID, pt.CCA1$ID)]
+clinical.data$Drug.subgroup <- y_auc$glm2.pred.class[match(clinical.data$ID, y_auc$ID)]
+
+# require suminput that indicates CCA1 or non-CCA1 of patients
+sumdrug <- suminput %>% subset(Cluster %in% c('CCA1','CCA2'))
+  
+clinical.data$Drug.subgroup <- sumdrug$Cluster[match(clinical.data$ID,sumdrug$ID)]
+
+# turn to numeric
+# vital.state: 1 = death, 0 = survive
+clinical.data$Vital.state <- as.numeric(clinical.data$Vital.state)
+clinical.data$Survival.days <- as.numeric(clinical.data$Survival.days)
+clinical.data$Cluster <- as.numeric(clinical.data$Cluster)
+
+# clinical data 3 year survival
+clinical.data$Vital.state3 <- ifelse(clinical.data$Survival.days > 1095, 0, 1)
+
+clinical.data$Vital.state1 <- ifelse(clinical.data$Survival.days > 366, 0, 1)
+
+clinical.data$Vital.state2 <- ifelse(clinical.data$Survival.days > 731, 0, 1)
+
+# separate T from TNM stage
+clinical.data$TNM <- substr(clinical.data$TNM.Stage,1,2)
+clinical.data$TNM <- ifelse(clinical.data$TNM == 'Ti', 'T0',
+                            ifelse(clinical.data$TNM == 'N/', NA, 
+                                   ifelse(clinical.data$TNM == 'Tx', NA, clinical.data$TNM)))
+
+```
+
+Now, we will try to find the 'weight' of each of 45 genes that can separate Cluster1 patients from the others. Why do we need this? It's because we previously found that gene expression profiles of Cluster1 were similar to CCA1. 
+
+```{r}
+# Cluster1
+cldata.c1like <- clinical.data %>% subset(Cluster == 1)
+# other Clusters
+cldata.c1unlike <- clinical.data %>% subset(Cluster != 1)
+
+# use supervise learning
+require(mixOmics)
+# dset i
+dset.pt <- dset3 %>% subset(rownames(.) %in% topgenes) #%>% dplyr::select(-one_of(to))
+
+# define Y values for both patients and cell lines
+cldata1 <- cldata.c1like %>% dplyr::select('ID','Cluster')
+cldata2 <- cldata.c1unlike  %>% dplyr::select('ID','Cluster')
+# change Cluster2,3,4 to 2
+cldata2$Cluster <- 2
+
+# add CCA cell lines, providing that CCA1 cells ~ Cluster1 patients
+celldata1 <- data.frame('ID' = to[1:6],
+                        'Cluster' = 1)
+celldata2 <- data.frame('ID' = to[7:15],
+                        'Cluster' = 2)
+# row-join
+cldata1 <- rbind(cldata1,celldata1)
+cldata2 <- rbind(cldata2,celldata2)
+
+# row-join into a better list
+cldata <- rbind(cldata1,cldata2)
+
+cldata <- cldata %>% subset(ID %in% colnames(dset.pt))
+# rearrange row
+cldata <- cldata %>% arrange(ID,colnames(dset.pt))
+
+dset.pt.Y <- ifelse(colnames(dset.cca) %in% to[1:6], 'CCA1','CCA2') %>% as.factor()
+
+# 45 genes
+dset.plsda <- mixOmics::plsda(X = t(dset.pt),
+                              Y = cldata$Cluster,
+                              ncomp = 6,
+                              mode = 'regression',
+                              max.iter = 100)
+
+
+background <- mixOmics::background.predict(dset.plsda, 
+                                 comp.predicted = 1,
+                                 dist = "centroids.dist") 
+
+mixOmics::plotIndiv(dset.plsda, 
+          comp = 1:2, 
+          group = cldata$Cluster,
+          ind.names = FALSE, 
+          title = "Centroids distance",
+          legend = TRUE,  
+          background = background)
+
+plsdacoef <- mixOmics::selectVar(dset.plsda, comp = 1)$value %>% as.data.frame()
+
+plsdacoef <- tibble::rownames_to_column(plsdacoef, var = 'Gene')
+
+colnames(plsdacoef) <- c('Gene','Coeff')
+
+myintercept <- data.frame('Gene' = '(intercept)',
+                          'Coeff' = 0)
+
+plsdacoef <- rbind(myintercept, plsdacoef)
+```
+
+
+```{r}
+require(survival)
+require(survminer)
+
+km.by.drug <- survival::survfit(Surv(Survival.days, Vital.state) ~ Drug.subgroup, data = clinical.data, conf.type = 'log-log')
+
+km.by.cluster <- survival::survfit(Surv(Survival.days, Vital.state) ~ Cluster, data = clinical.data, conf.type = 'log-log')
+
+km.by.tnm <- survival::survfit(Surv(Survival.days, Vital.state) ~ TNM, data = clinical.data, conf.type = 'log-log')
+
+# Fit survival curves for each formula
+# fit <- surv_fit(formulas, data = colon)
+
+comb.km <- list(drug = km.by.drug, cluster = km.by.cluster)
+
+# by group
+fit.group <- coxph(Surv(Survival.days, Vital.state) ~ Drug.subgroup,
+                   data = clinical.data)
+
+summary(fit.group)
+```
+
+```{r}
+# subset data
+clinical.dataAsia <- clinical.data %>% subset(Country %in% c('Singapore','Thailand','Korea'))
+
+# by group
+Asfit.group <- coxph(Surv(Survival.days, Vital.state) ~ Drug.subgroup,
+                   data = clinical.dataAsia)
+
+summary(Asfit.group)
+
+```
+
+```{r}
+# subset data
+clinical.dataEU <- clinical.data %>% subset(!Country %in% c('Singapore','Thailand','Korea'))
+
+# by group
+EUfit.group <- coxph(Surv(Survival.days, Vital.state) ~ Drug.subgroup,
+                   data = clinical.dataEU)
+
+summary(EUfit.group)
+```
+
+```{r}
+# subset data
+clinical.dataTH <- clinical.data %>% subset(Country %in% c('Thailand'))
+
+# by group
+THfit.group <- coxph(Surv(Survival.days, Vital.state) ~ Drug.subgroup,
+                   data = clinical.dataTH)
+
+summary(THfit.group)
+```
+
+```{r}
+
+Askm.by.drug <- survival::survfit(Surv(Survival.days,Vital.state) ~ Drug.subgroup, data = clinical.dataAsia, conf.type = 'log-log')
+
+Askm.by.cluster <- survival::survfit(Surv(Survival.days,Vital.state) ~ Cluster, data = clinical.dataAsia, conf.type = 'log-log')
+
+Askm.by.tnm <- survival::survfit(Surv(Survival.days,Vital.state) ~ TNM, data = clinical.dataAsia, conf.type = 'log-log')
+
+# Fit survival curves for each formula
+# fit <- surv_fit(formulas, data = colon)
+
+Ascomb.km <- list(drug = Askm.by.drug, cluster = Askm.by.cluster)
+
+
+```
+
+
+```{r}
+# calculate p value
+fit.null <- surv_fit(Surv(Survival.days, Vital.state == 1) ~ 1, 
+                     data = clinical.data)
+
+fit.drug <- surv_fit(Surv(Survival.days, Vital.state == 1) ~ Drug.subgroup, 
+                     data = clinical.data)
+
+fit.cluster <- surv_fit(Surv(Survival.days, Vital.state == 1) ~ Cluster,
+                        data = clinical.data)
+
+fit.tnm <- surv_fit(Surv(Survival.days, Vital.state == 1) ~ TNM, 
+                        data = clinical.data)
+
+# combind drug and cluster
+fit.list <- list(drug = fit.drug, cluster = fit.cluster, tnm = fit.tnm)
+
+pval.surv <- surv_pvalue(fit.list, combine = FALSE)
+
+pval.surv$drug
+```
+
+
+
+```{r}
+fig5DAs <- ggsurvplot(Ascomb.km,
+                     data = clinical.data,
+                     combine = TRUE,
+                     conf.int = FALSE, 
+                     surv.scale = 'percent',
+                     censor.shape = '+',
+                     censor.size = 4,
+                     palette = c('cyan','orange','dodgerblue','lightgoldenrod','olivedrab2','firebrick1'),
+                     pval = FALSE,
+                     pval.coord = c(1000,0.9), 
+                     pval.size = 3,
+                     ggtheme = theme_classic2(base_family = 'Arial'),
+                     font.family = 'Arial',
+                     font.x = c(10, 'bold', 'black'),
+                     font.y = c(10, 'bold', 'black'),
+                     font.tickslab = c(8, 'plain', 'black'),
+                     linetype = c('solid','solid','solid','solid','solid','solid'),
+                     legend.title = '',
+                     xscale = 'd_y',
+                     break.time.by = 365.25,
+                     legend = 'bottom',
+                     legend.labs = c('CCA 1','CCA 2',
+                                     'Type I','Type II',
+                                     'Type III','Type IV')
+                     # xlim = c(0,3000)
+                     # risk.table = 'percentage', 
+                     # risk.table.height = 0.35,
+                     # risk.table.fontsize = 0.5
+) #+ guides(shape = guide_legend(override.aes = list(shape = c(17,17,16,16,16,16))))
+
+# fig5D$plot <- fig6D$plot + labs(x = 'Time in years',y = 'Overall Survival (%)') +
+#   theme(
+#     legend.text = element_text(size = 7)
+#   )
+
+fig5DAs
+```
+
+Save figure 5D 
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+extrafont::loadfonts(device = 'win')
+ggsave(print(fig6D),
+       filename = 'CombinedDatasets_SurvivalAnalysis_2PCSVM_20192024.png', 
+       height = 10,
+       width = 10, 
+       units = 'cm', 
+       dpi = 600)
+dev.off()
+```
+
+```{r}
+setwd('C:/Users/patipark/Downloads')
+write.csv(summary.all2, 'SummaryData.csv',quote = FALSE,row.names = FALSE,sep = '')
+```
+
+Same as mysurv but use ggplot
+```{r}
+sum.drug <- surv_summary(Askm.by.drug,data = clinical.data) %>% as.data.frame()
+
+# convert time in days to years
+specify_decimal <- function(x, k) trimws(format(round(x, k), nsmall = k))
+sum.drug$time.year <- specify_decimal(sum.drug$time / 365.25, k = 1) %>% as.numeric()
+# convert surv to 100%
+sum.drug$surv <- sum.drug$surv * 100
+
+# add factor levels
+# sum.drug$Drug.subgroup <- ifelse(sum.drug$Drug.subgroup == 1,'CCA1','CCA2')
+sum.drug$Drug.subgroup <- factor(sum.drug$Drug.subgroup, levels = c('CCA1','CCA2'))
+
+mean.survival <- sum.drug %>% group_by(Drug.subgroup) %>% summarise(mean.survival = mean(time.year))
+
+sum.drug$lty <- ifelse(sum.drug$Drug.subgroup == 'CCA1','CCA1','CCA2')
+
+fig5D2As <- ggplot() +
+  geom_step(data = sum.drug,
+            aes(x = time.year,
+                y = surv, 
+                group = Drug.subgroup, 
+                color = Drug.subgroup,
+                alpha = lty),
+            size = 1) +
+  scale_color_manual(values = c('CCA1' = 'cyan', 'CCA2' = 'orange')) +
+  scale_shape_manual(values = c('CCA1' = 16, 'CCA2' = 16)) +
+  scale_alpha_manual(values = c('drug' = 1,'molec' = 1)) +
+  scale_size_manual(values = c('drug' = 1,'molec' = 1)) +
+  scale_x_continuous(breaks = seq(0,8,1), limits = c(0,5)) +
+  theme_pubr() +
+  theme(
+    # text = element_text(family = 'Arial', size = 10),
+    # axis.text = element_text(family = 'Arial', size = 8),
+    # axis.title = element_text(size = 10),
+    legend.position = 'none'
+  ) +
+  # facet_grid(lty ~ .) +
+  labs(x = 'Time (years)',
+       y = 'Survival Rate (%)')
+
+fig5D2As
+```
+
+Save figure 5D version 2
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# extrafont::loadfonts(device = 'win')
+ggsave(fig5D2.all,
+       filename = 'Fig5D2_Survival_AllPatients_20200228.pdf', 
+       height = 6,
+       width = 7, 
+       units = 'cm',
+       device = cairo_pdf)
+dev.off()
+```
+
+After assigning drug subclass using ridge regression, plot CCA patients and cell lines in PCA space
+```{r}
+datin.pca <- dat.tdm %>% 
+  subset(gene %in% topgenes) %>%
+  reshape2::dcast(., ID ~ gene, value.var = 'expr') %>% tibble::column_to_rownames(., var = 'ID') 
+
+set.seed(100)
+# run PCA analysis using prcomp
+res.pca <- prcomp(datin.pca, scale. = TRUE)
+
+# calculate percent of variance (PoV)
+PoV <- res.pca$sdev^2 / sum(res.pca$sdev^2)
+
+PoV <- formatC(PoV, format = "f", digits = 4) %>% as.numeric()
+PoV <- PoV * 100
+
+# PC1 + PC2 = 13.77 + 9.5 = 23.27 % variance explained
+# extract data
+dat.pca <- as.data.frame(res.pca$x)
+
+dat.pca <- tibble::rownames_to_column(dat.pca, var = 'ID')
+
+# assign annotations
+dat.pca$pred.class <- y_auc$glm.pred.class[match(dat.pca$ID,y_auc$ID)]
+
+# assign corrected drug class to CCA cell lines
+dat.pca$pred.class <- ifelse(dat.pca$ID %in% to[1:6], 1,
+                             ifelse(dat.pca$ID %in% to[7:15], 2, dat.pca$pred.class))
+
+dat.pca$dataset <- ifelse(grepl('^CCA+',dat.pca$ID), 'apinya',
+                              ifelse(grepl('*CCA$',dat.pca$ID), 'tiger', 'cca'))
+
+```
+
+Plot PCA of CCA and Apinya using PC1 and PC2
+Check the distribution of the samples
+```{r}
+# extract data from PC1 and PC2
+pca.input <- dat.pca %>% dplyr::select(ID,PC1,PC2,pred.class,dataset)
+
+pca.input$molec.class <- clinical.data$Cluster[match(pca.input$ID,clinical.data$ID)]
+
+# remove NA patients
+pca.input <- pca.input[!is.na(pca.input$pred.class),]
+
+# replace 1 and 2 with CCA1 anc CCA2, respectively
+pca.input$pred.class <- ifelse(pca.input$pred.class == 1, 'D1','D2')
+
+# subset data CCA cell lines
+cc <- pca.input %>% subset(dataset == 'cca')
+apy <- pca.input %>% subset(dataset == 'apinya')
+
+cc$new.class <- ifelse(cc$pred.class == 'D1','D1','D2')
+
+apy$new.class <- ifelse(apy$molec.class == 1,'M1',
+                        ifelse(apy$molec.class == 2,'M2',
+                               ifelse(apy$molec.class == 3,'M3',
+                                      ifelse(apy$molec.class == 4,'M4','unk'))))
+
+# remove NA molec.class in CCA patients
+apy <- apy[!is.na(apy$molec.class),]
+
+require(ggrepel)
+figS7B <- ggplot() +
+  geom_point(data = cc,
+             aes(x = PC1,
+                 y = PC2,
+                 color = pred.class,
+                 shape = dataset,
+                 fill = new.class
+                 ), size = 5) +
+  geom_point(data = apy,
+             aes(x = PC1,
+                 y = PC2,
+                 color = pred.class,
+                 shape = dataset,
+                 fill = new.class
+                 ), size = 2) +
+  scale_color_manual(values = c('D1' = 'cyan','D2' = 'orange',
+                               'M1' = 'dodgerblue','M2' = 'lightgoldenrod',
+                               'M3' = 'olivedrab2','M4' = 'firebrick1'),
+                    labels = c('D1' = 'D1', 'D2' = 'D2',
+                               'M1' = 'M1', 'M2' = 'M2',
+                               'M3' = 'M3', 'M4' = 'M4')) +
+  scale_fill_manual(values = c('D1' = NA,'D2' = NA,
+                               'M1' = 'dodgerblue','M2' = 'lightgoldenrod',
+                               'M3' = 'olivedrab2','M4' = 'firebrick1'),
+                    labels = c('D1' = 'D1', 'D2' = 'D2',
+                               'M1' = 'M1', 'M2' = 'M2',
+                               'M3' = 'M3', 'M4' = 'M4')) +
+  scale_shape_manual(values = c('cca' = 21,
+                                'apinya' = 24),
+                     labels = c('cca' = 'cca',
+                                'apinya' = 'apinya')) +
+  geom_text_repel(data = cc,
+                  aes(x = PC1,
+                      y = PC2,
+                      label = ID),
+                  size = 3,
+                  nudge_x = 0.2, 
+                  nudge_y = 0.2) +
+  labs(
+       x = paste0('PC1 (',PoV[1],'%)'),
+       y = paste0('PC2 (',PoV[2],'%)'))+
+  theme_minimal() +
+  theme(
+    # text = element_text(family = 'Arial'),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6),
+    axis.text = element_text(size = 6),
+    axis.title = element_text(size = 8),
+    legend.direction = 'vertical'
+  )
+
+figS7B
+```
+
+Save FigS7B
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# extrafont::loadfonts(device = 'win')
+ggsave(figS7B,
+       filename = 'FigS7B_PCA_20200227.pdf', 
+       height = 12,
+       width = 14.5, 
+       units = 'cm',
+       device = cairo_pdf)
+dev.off()
+```
+
+Fig5C
+Compare predicted classes by unsupervised and supervised clustering methods
+```{r}
+apyi <- clinical.data %>% dplyr::select(ID,Fluke.Infection,Country,Cluster,Drug.subgroup)
+
+# apyi <- apyi %>% subset(Country %in% c('Korea','Singapore','Thailand'))
+
+colnames(apyi)[4] <- 'molec.class'
+colnames(apyi)[5] <- 'pred.class'
+# count CCA drug subtypes resulting from supervised prediction
+ptcounts <- apyi %>% count(molec.class,pred.class, name = 'tally')
+
+# remove NA (CCA cell lines)
+ptcounts <- ptcounts[!is.na(ptcounts$molec.class),]
+
+ptcounts <- ptcounts %>% group_by(pred.class) %>% 
+  mutate(percent = (tally / (tally[molec.class == 1] + 
+                             tally[molec.class == 2] +
+                             tally[molec.class == 3] +
+                             tally[molec.class == 4])) * 100)
+
+# change Cx to Mx
+ptcounts$molec.class <- ifelse(ptcounts$molec.class == 1,'M1',
+                               ifelse(ptcounts$molec.class == 2,'M2',
+                                      ifelse(ptcounts$molec.class == 3,'M3','M4')))
+
+
+fig5C <- ggplot(ptcounts,
+                aes(x = pred.class,
+                    y = percent,
+                    fill = molec.class,
+                    label = paste0(sprintf("%0.0f", round(percent, digits = 1)),'%'))) +
+  geom_col() +
+  scale_fill_manual(values = c('M1' = 'dodgerblue','M2' = 'lightgoldenrod',
+                               'M3' = 'olivedrab2','M4' = 'firebrick1')) +
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+  theme_bw() +
+  theme(
+    # text = element_text(family = 'Arial'),
+  ) +
+  # facet_grid(. ~ Clustering, space = 'free', scales = 'free') +
+  labs(x = 'CCA Subtypes',
+       y = 'Percent of Total',
+       fill = 'Molecular Subtypes')
+
+###
+apy$infect <- clinical.data$Fluke.Infection[match(apy$ID,clinical.data$ID)]
+infcounts <- apy %>% subset(dataset = 'apinya') %>% count(pred.class,infect, name = 'tally')
+infcounts <- infcounts %>% group_by(pred.class) %>% 
+  mutate(percent = (tally / (tally[infect == 'Fluke-Pos'] + tally[infect == 'Fluke-Neg'])) * 100)
+
+infcounts$infect <- ifelse(infcounts$infect == 'Fluke-Pos', 'Pos','Neg')
+
+infcounts$infect <- factor(infcounts$infect, levels = c('Pos','Neg'))
+
+figS <- ggplot(infcounts,
+       aes(x = pred.class,
+           y = percent,
+           fill = infect,
+           label = paste0(sprintf("%0.0f", round(percent, digits = 1)),'%'))) +
+  geom_col() +
+  scale_fill_manual(values = c('Pos' = 'firebrick','Neg' = 'lightpink')) +
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+  theme_bw() +
+  theme(
+    # text = element_text(family = 'Arial'),
+  ) +
+  # facet_grid(. ~ Clustering, space = 'free', scales = 'free') +
+  labs(x = 'CCA Subtype',
+       y = 'Percent of Total',
+       fill = 'Fluke Infection')
+
+fig5C
+```
+
+Save fig5C
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# extrafont::loadfonts(device = 'win')
+ggsave(fig5C.all,
+       filename = 'Fig5C_Pecentage_AllPatients_20200228.pdf', 
+       height = 6,
+       width = 8, 
+       units = 'cm',
+       device = cairo_pdf)
+dev.off()
+```
+
+Draw hierarchical clustering
+Fig5B
+```{r}
+datin.pca <- dat.tdm %>% 
+  subset(gene %in% topgenes) %>%
+  reshape2::dcast(., ID ~ gene, value.var = 'expr') %>% tibble::column_to_rownames(., var = 'ID')
+# use gene expression data
+dat.hc <- datin.pca
+
+hr <- hclust(dist(dat.hc, method = 'euclidean'), method = 'complete')
+
+clusters.41 <- dendextend::cutree(hr, k = 2)
+```
+
+```{r}
+patient.list <- colnames(datin)
+clinical.data <- annotation.apinya %>% subset(Sample.ID %in% patient.list)
+# select columns
+clinical.data <- clinical.data[,c(1,2,3,4,6,11,12,13,14,22)]
+# rename columns
+colnames(clinical.data) <- c('ID','Fluke.Infection','Country','Sex','Anatomical.subtype','TNM.Stage','Stage','Vital.state','Survival.days','Cluster')
+
+# add predicted drug response subgroup
+# clinical.data$Drug.subgroup <- pt.CCA1$PredClass.2[match(clinical.data$ID, pt.CCA1$ID)]
+clinical.data$Drug.subgroup <- y_auc$glm.pred.class[match(clinical.data$ID, y_auc$ID)]
+# turn to numeric
+clinical.data$Vital.state <- as.numeric(clinical.data$Vital.state)
+clinical.data$Survival.days <- as.numeric(clinical.data$Survival.days)
+clinical.data$Cluster <- as.numeric(clinical.data$Cluster)
+```
+
+```{r}
+datin <- t(dat.hc) %>% as.data.frame()
+
+# add annotations
+datin2 <- tibble::rownames_to_column(datin, var = 'Gene')
+
+datannot <- melt(datin2, id.vars = 'Gene', variable.name = 'ID', value.name = 'expr')
+
+datannot$dataset <- ifelse(datannot$ID %in% to, 'cca','apinya')
+datannot$subgroup <- ifelse(datannot$ID %in% to[1:6],'CCA1',
+                            ifelse(datannot$ID %in% to[7:15],'CCA2','unk'))
+datannot$apinya.subgroup <- clinical.data$Cluster[match(datannot$ID,clinical.data$ID)]
+
+
+### Column annotation
+# tally the hallmark ID and genes
+df.col <- data.frame(ID = colnames(datin))
+ref.col <- datannot %>% select(c('ID','dataset','subgroup','apinya.subgroup')) %>% unique()
+df.col$dataset <- ref.col$dataset[match(df.col$ID,ref.col$ID)]
+df.col$subgroup <- ref.col$subgroup[match(df.col$ID,ref.col$ID)]
+# add apinya subgroups
+df.col$apinya.subgroup <- ref.col$apinya.subgroup[match(df.col$ID,ref.col$ID)]
+# replace df.col$apinya.subgroup NA with 0
+df.col$apinya.subgroup[is.na(df.col$apinya.subgroup)] <- 0
+
+# add color 
+df.col$ds.color <- ifelse(df.col$dataset == 'cca', 'red',
+                           ifelse(df.col$dataset == 'tiger', 'blue','green'))
+df.col$sg.color <- ifelse(df.col$subgroup == 'CCA1','cyan',
+                          ifelse(df.col$subgroup == 'CCA2', 'orange','gray50'))
+# 'C1' = 'dodgerblue','C2' = 'lightgoldenrod',
+#                                 'C3' = 'olivedrab2','C4' = 'firebrick2'
+
+df.col$apsg.color <- ifelse(df.col$apinya.subgroup == 1,'C1',
+                            ifelse(df.col$apinya.subgroup == 2,'C2',
+                                   ifelse(df.col$apinya.subgroup == 3,'C3',
+                                          ifelse(df.col$apinya.subgroup == 4,'C4','N'))))
+                            
+df.col <- tibble::column_to_rownames(df.col, var = 'ID')
+
+
+# add predicted drug subtype
+df.col$pred.CCA <- y_auc$glm.pred.class[match(rownames(df.col),y_auc$ID)]
+df.col$pred.CCA2 <- ifelse(df.col$pred.CCA == 1,'C1',
+                           ifelse(df.col$pred.CCA == 2,'C2','C0'))
+df.col$pred.CCA2[is.na(df.col$pred.CCA2)] <- 'C0'
+
+df.col$pred.CCA <- ifelse(df.col$pred.CCA == 1, 'CCA1','CCA2')
+
+df.col$pred.CCA2 <- ifelse(df.col$dataset == 'cca','C0',df.col$pred.CCA2)
+
+# dataset
+ds.apinya <- df.col$apsg.color
+names(ds.apinya) <- rownames(df.col)
+
+ds.apinya.drug <- df.col$pred.CCA2
+names(ds.apinya.drug) <- rownames(df.col)
+
+# ds.apinya <- ifelse(df.col$dataset == 'apinya','Y','N')
+# names(ds.apinya) <- rownames(df.col)
+ds.tiger <- ifelse(df.col$dataset == 'tiger','Y','N')
+names(ds.tiger) <- rownames(df.col)
+ds.cca <- ifelse(df.col$dataset == 'cca','Y','N')
+names(ds.cca) <- rownames(df.col)
+ds.ccasg <- df.col$subgroup
+names(ds.ccasg) <- rownames(df.col)
+
+# add liver-fluke status
+df.col$infect <- clinical.data$Fluke.Infection[match(rownames(df.col),clinical.data$ID)]
+df.col$infect[is.na(df.col$infect)] <- 'None'
+ds.infect <- df.col$infect
+names(ds.infect) <- rownames(df.col)
+
+require(circlize)
+
+mycolors <- rev(c('#b2182b','#d6604d','#f4a582','#fddbc7','#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac'))
+```
+
+Draw heatmap for comparing Jusakul-CCA
+```{r}
+require(ComplexHeatmap)
+ha2.col <- HeatmapAnnotation(cca.subgroup = ds.ccasg,
+                             apinya.drug = ds.apinya.drug,
+                             apinya = ds.apinya,
+                             apinya.infect = ds.infect,
+                             col = list(apinya = c('C1' = 'dodgerblue','C2' = 'lightgoldenrod',
+                                                   'C3' = 'olivedrab2','C4' = 'firebrick2',
+                                                   'N' = 'white'),
+                                        apinya.drug = c('C1' = 'cyan','C2' = 'orange','C0' = 'white'),
+                                        apinya.infect = c('Fluke-Pos' = 'firebrick', 
+                                                          'Fluke-Neg' = 'lightpink',
+                                                          'None' = 'white'),
+                                        cca.subgroup = c('CCA1'='cyan','CCA2'='orange','unk'='white')
+                                        
+                                        ),
+                             gp = gpar(col = 'white'),
+                             annotation_height = unit.c(unit(0.5,'cm'),
+                                                        unit(1,'cm'),
+                                                        unit(1,'cm'),
+                                                        unit(1,'cm'),
+                                                        unit(2,'cm'))# add border color
+                             
+)
+
+mybar <- mycoef
+
+ha2.row <- rowAnnotation(Coef = anno_barplot(mybar$Coeff, baseline = 0))
+
+# plot only apinya and CCA
+apcc <- ref.col %>% subset(dataset %in% c('apinya','cca'))
+datin.apcc <- datin[,which(colnames(datin) %in% apcc$ID)] %>% as.data.frame()
+
+# subset only 45 genes 
+datin.apcc.sub <- datin.apcc %>% subset(rownames(.) %in% topgenes)
+
+# scale expression level across 45 genes
+test <- apply(X = datin.apcc.sub,MARGIN = 1,FUN = scale) %>% t() %>% as.data.frame()
+colnames(test) <- colnames(datin.apcc.sub)
+
+hr <- hclust(dist(t(test), method = 'euclidean',), method = 'complete')
+clusters <- dendextend::cutree(hr, k = 2)
+
+# Plot heatmap
+fig5B <- ComplexHeatmap::Heatmap(as.matrix(test), # my.dt.sorted
+                  # column_km = 2,
+                  # split = clusters,
+                  # gap = unit(2,'mm'),
+                  # row_gap = gap,
+                  row_names_side = 'left',
+                  # column_km = 2,
+                  cluster_rows = TRUE, 
+                  clustering_distance_rows = 'euclidean',
+                  clustering_method_rows = 'complete',
+                  show_row_dend = FALSE,
+                  row_dend_width = unit(5,'mm'),
+                  show_row_names = TRUE,
+                  cluster_columns = TRUE, 
+                  clustering_distance_columns = 'euclidean',
+                  clustering_method_columns = 'complete',
+                  show_column_dend = TRUE,
+                  show_column_names = TRUE,
+                  column_dend_height = unit(5,'mm'),
+                  column_names_gp = gpar(fontsize = 6, family = 'Arial'),
+                  row_names_gp = gpar(fontsize = 8, family = 'Arial'),
+                  top_annotation = ha2.col,
+                  right_annotation = ha2.row,
+                  # bottom_annotation = ha.col,
+                  col = circlize::colorRamp2(c(-2,-1.75,-1,-0.75,0,0.75,1,1.75,2), mycolors),
+                  # heatmap_legend_param = list(
+                  #   color_bar = 'discrete',
+                  #   direction = 'horizontal',nrow = 1),
+                  # column_title = paste0('Classified by \n',gsub('_S.R','',my.drug),' GR50'),
+                  name = 'zscore\nexpr' # legend title
+)
+
+fig5B
+```
+
+Save Jusakul-CCA heatmap fig5B
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+pdf(paste0('Fig5B_CombinedDatasets_Heatmap_JusakulCCA_20200228.pdf'),
+    height = 7,
+    width = 15)
+draw(fig5B,
+     height = unit(5,'in'),
+     width = unit(14,'in')
+     )
+dev.off()
+```
+
