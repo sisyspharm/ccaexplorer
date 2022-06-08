@@ -1,0 +1,559 @@
+---
+title: "mutation and phosphorelation"
+output: mutation and phosphorelation
+---
+
+
+
+Final version 07012022
+
+```{r}
+
+rm(list = ls())
+#we must library plyr before dplyr
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(viridis)
+library(dendsort)
+library(tidyr)
+library(tidyverse)
+
+setwd("G:/My Drive/Milk CCA/All Final for paper/Figure/High Resolution/final/Draft 28/Phospho profile")
+#data <- read.csv("AUC_table.csv")
+#option1
+data<- read.csv("AUC_table.csv")
+
+#read mutation table
+mut <- read.csv("OnceRankReplace1.csv")
+
+#for 12
+mut2<- mut %>%
+    group_by(X) %>%
+    gather("cellline","status",2:12)
+
+#return character of cellline to factor
+mut2$cellline <- as.factor(mut2$cellline)
+#Add mutation status 0 1 to new column 
+mut2<- mut2 %>%
+  mutate(status2=status)
+#place 1 with mutant
+mut2$status2[mut2$status!=0]<-"mutant"
+#place 0 with non-mutant
+mut2$status2[mut2$status==0]<-"wt"
+#place wt for 000 no alteration in 3 cell line
+mut2$status2[mut2$status=="000"]<-"wt"
+
+#Add column 1 0
+mut2<- mut2 %>%
+  mutate(status3=status)
+#place 1 with mutant
+mut2$status3[mut2$status3!=0]<-"1"
+#place 0 with mutant
+mut2$status3[mut2$status3==0]<- "0"
+
+#convert X from char to numeric
+mut2$status3 <- as.numeric(mut2$status3 )
+#DF3B$status3[DF3B$status3 == 0] <- return(NULL)
+
+#sort by gene
+mut2<-arrange(mut2,X) %>%
+  mutate(Subtype=cellline)
+
+mut3 <-mut2 %>% mutate(Subtype=recode(Subtype,HUCCT1="CCA2",KKKD068="CCA2",KKKD131="CCA2",KKKD138="CCA1",                             KKU055="CCA2",KKU100="CCA2",KKU213="CCA1",KKU214="CCA1",KKU156="CCA1",
+                                    RBE="CCA1",SSP25="CCA2"))
+
+#change subtype colum from factor to character
+mut3$Subtype <- as.character(mut3$Subtype)
+
+#_______End Mut table 
+
+#add mean median by p_L group
+library(data.table)
+
+#mean mean per P_L
+setDT(data)[, mean_meanAUC := mean(AUC_Mean), by = P_L]
+#mean median per P_L
+setDT(data)[, mean_medianAUC := mean(AUC_Median), by = P_L]
+
+#mean mean per P_L
+setDT(data)[, SD_meanAUC := sd(AUC_Mean), by = P_L]
+#mean median per P_L
+setDT(data)[, SD_medianAUC := sd(AUC_Median), by = P_L]
+
+
+#add scaled mean P-L
+data$Scale_MeanAUC<- ((data$AUC_Mean-data$mean_meanAUC))/(data$SD_meanAUC)
+
+#add scaled median P_L
+data$Scale_MedAUC<- ((data$AUC_Median-data$mean_medianAUC))/(data$SD_medianAUC)
+
+#-------------end Phospho table-------------------------------------------------------------------------------------------------
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#mergedata
+
+#original no filter
+#mergeDF <- inner_join(mut3, data, by = "cellline",all=TRUE)
+#filter non relate progrowth proinflam
+# without aniso
+mergeDF2 <- inner_join(mut3, data, by = "cellline",all=TRUE)%>%filter(Proteins!="FoxO3a")%>%filter(Proteins!="pRelA")%>%filter(Proteins!="pSTAT3")
+
+tDF<- mergeDF2%>%
+    select(status2,P_L,Scale_MedAUC, Subtype, X) %>% 
+    group_by(X,status2,P_L) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(status2,X,P_L)  %>%
+    spread(status2,Scale_MedAUC) %>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_mutant = lengths(mutant))%>%mutate(l_WT = lengths(wt))
+
+tDF2<- mergeDF2%>%
+    select(P_L,Scale_MedAUC, Subtype, X) %>% 
+    group_by(X,Subtype,P_L) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(Subtype,X,P_L)  %>%
+    spread(Subtype,Scale_MedAUC)%>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_CCA1 = lengths(CCA1))%>%mutate(l_CCA2 = lengths(CCA2))
+
+jDF<- left_join(tDF,tDF2,by="gene_P_L")
+
+jDF <- jDF[!jDF$mutant == "NULL", ] 
+
+jDFt<- jDF%>%mutate(l_mutwt = lengths(mutant)+lengths(wt))%>%mutate(l_subt = lengths(CCA1)+lengths(CCA2))
+
+
+TT<- jDFt%>%group_by(gene_P_L)%>%
+    mutate(mean_AUC_mutant = mean(unlist(mutant)),
+           mean_AUC_WT = mean(unlist(wt)),
+           mean_AUC_CCA1 = mean(unlist(CCA1)),
+           mean_AUC_CCA2 = mean(unlist(CCA2)), 
+           #med_AUC_mutant = median(unlist(mutant)),
+           #med_AUC_WT = median(unlist(wt)),
+           med_AUC_CCA1 = median(unlist(CCA1)),
+           med_AUC_CCA2 = median(unlist(CCA2)),
+           AverageDifference_Mutant.WT = mean_AUC_mutant-mean_AUC_WT,
+           AverageDifference_CCA1.2 = mean_AUC_CCA1-mean_AUC_CCA2,
+           #MedianDifference_Mutant.WT = med_AUC_mutant-med_AUC_WT,
+           FC=mean_AUC_mutant/mean_AUC_WT)%>%
+    group_by(gene_P_L)%>%
+    mutate( p.val_mut = wilcox.test(unlist(mutant),unlist(wt))$p.value,p.val_cca = wilcox.test(unlist(CCA1),unlist(CCA2))$p.value)
+
+#fdr = p.adju
+TT2<- TT%>%mutate(sig=ifelse(p.val_mut<0.055, "Mutation-associated with reduced kinase activity_p.val<0.05", "no association"))
+TT2$sig[TT$AverageDifference_Mutant.WT <(-0.5) &TT2$p.val_mut<0.055 ]<-"Mutation-associated with reduced kinase activity_p.val<0.05"
+TT2$sig[TT$AverageDifference_Mutant.WT >0.5 &TT2$p.val_mut<0.055 ]<-"Mutation-associated with enhanced kinase activity_p.val<0.05"
+
+#TT2_fil<- TT2%>%filter(p.val_mut<0.05)
+TT2_fil2<- TT2%>%filter(p.val_mut<=0.055)
+
+TT2_fil2<- TT2_fil2%>% separate(gene_P_L, c("Gene", "P","L"), sep="_") #%>%unite_( "P_L", c("P","L")) 
+#TT2_fil2<- TT2_fil2%>% gather()
+
+
+#plot  mut vs wt color lab enrich vs reduce 
+
+p <- ggplot(TT2, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2$sig),size = TT2$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2,p.val_mut<=0.055& abs(AverageDifference_Mutant.WT) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()
+
+##plot quadant
+
+TT3<- TT2%>%mutate(sig2=ifelse(p.val_mut<=0.055, "Mutation-associated with reduced kinase activity_p.val<=0.055", "no association"))
+TT3$sig2[TT2$AverageDifference_Mutant.WT <(0) &TT2$p.val_mut<=0.055& TT2$AverageDifference_CCA1.2<(0) ]<-"Mutation-associated with CCA2 and reduced kinase activity_p.val<0.05"
+TT3$sig2[TT2$AverageDifference_Mutant.WT >(0) &TT2$p.val_mut<=0.055& TT2$AverageDifference_CCA1.2>(0) ]<-"Mutation-associated with CCA1 and enhanced kinase activity_p.val<0.05"
+TT3$sig2[TT2$AverageDifference_Mutant.WT >(0) &TT2$p.val_mut<=0.055& TT2$AverageDifference_CCA1.2<(0) ]<-"Mutation-associated with CCA2 and enhanced kinase activity_p.val<0.05"
+TT3$sig2[TT2$AverageDifference_Mutant.WT <(0) &TT2$p.val_mut<=0.055& TT2$AverageDifference_CCA1.2>(0) ]<-"Mutation-associated with CCA1 and reduced kinase activity_p.val<0.05"
+
+
+TT3 <- TT3%>%mutate(gene=gene_P_L)%>%separate(gene, c("gene", "P","L"))
+TT4_fil<- TT3%>%filter(p.val_mut<=0.055|p.val_cca<=0.02)
+TT5_fil<- filter(TT2,gene_P_L %in%c("KRAS_pERK_EGF","KRAS_pAKT_EGF","KRAS_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","PTEN_RelA_TNFalpha"))%>%mutate(gene=gene_P_L)%>%separate(gene, c("gene", "P","L"))%>%mutate(sig2=ifelse(p.val_mut<=0.055, "Mutation-associated with reduced kinase activity_p.val<=0.055", "no association"))
+TT4_fil <- TT4_fil[!TT4_fil$wt == "NULL", ] 
+TT4_fil <- full_join(TT4_fil,TT5_fil)
+
+p <- ggplot(TT4_fil, aes(AverageDifference_Mutant.WT,  AverageDifference_CCA1.2))+geom_point(aes(colour = factor(TT4_fil$sig2),size = -log(p.val_mut), alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2,gene_P_L %in% c("KRAS_pERK_EGF","KRAS_pAKT_EGF","KRAS_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","PTEN_RelA_TNFalpha","KMT2D_pERK_EGF", "NOTCH4_pERK_EGF","ARID1A_pAKT_IGF1","KEAP1_pAKT_IGF1","PIK3C2B_pERK_IGF1","pTEN_pAKT_IGF1","KRAS_RelA_TNFalpha","FLT3_pERK_IGF1","GSK3B_pS6K_EGF","ARID1A_pAKT_EGF","SMO_RelA_TNFalpha","AR_pS6K_IGF1","LRRK2_pERK_EGF","AR_pS6K_EGF","LRP1B_pERK_IGF1","IRS2_pERK_IGF1","NOTCH3_pS6K_EGF")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+
+p+theme_classic()+ geom_vline(xintercept = 0,linetype="dashed", color = "grey", size=1)+ geom_hline(yintercept = 0,linetype="dashed", color = "grey", size=1)
+
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#Plot bar 
+#start with TT2_fil2 dataframe
+mergeDF3<- inner_join(mut3, data, by = "cellline",all=TRUE)%>%filter(Proteins!="FoxO3a")%>%filter(Proteins!="pRelA")%>%filter(Proteins!="pSTAT3")%>%unite_( "cca_status", c("Subtype","status2"))
+
+tDF<- mergeDF2%>%
+    select(status2,P_L,Scale_MedAUC, Subtype, X) %>% 
+    group_by(X,status2,P_L) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(status2,X,P_L)  %>%
+    spread(status2,Scale_MedAUC) %>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_mutant = lengths(mutant))%>%mutate(l_WT = lengths(wt))
+
+tDF2<- mergeDF2%>%
+    select(P_L,Scale_MedAUC, Subtype, X) %>% 
+    group_by(X,Subtype,P_L) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(Subtype,X,P_L)  %>%
+    spread(Subtype,Scale_MedAUC)%>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_CCA1 = lengths(CCA1))%>%mutate(l_CCA2 = lengths(CCA2))
+
+tDFN<- mergeDF3%>%
+    select(cca_status,P_L,Scale_MedAUC, X) %>% 
+    group_by(X,cca_status,P_L) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(cca_status,X,P_L)  %>%
+    spread(cca_status,Scale_MedAUC) %>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_cca1_mut= lengths(CCA1_mutant))%>%mutate(l_cca1 = lengths(CCA1_wt))%>%mutate(l_cca2_mut = lengths(CCA2_mutant))%>%mutate(l_cca2_wt = lengths(CCA2_wt))
+
+jDF<- left_join(tDF,tDF2,by="gene_P_L")
+jDF<- left_join(jDF,tDFN,by="gene_P_L")
+
+jDF <- jDF[!jDF$mutant == "NULL", ] 
+
+jDFt<- jDF%>%mutate(l_mutwt = lengths(mutant)+lengths(wt))%>%mutate(l_subt = lengths(CCA1)+lengths(CCA2))
+
+#jDFt<- jDF%>% separate(gene_P_L, c("Gene", "P","L"), sep="_")%>%unite_( "P_L", c("P","L")) 
+TT<- jDFt%>%group_by(gene_P_L)%>%
+    mutate(mean_AUC_mutant = mean(unlist(mutant)),
+           mean_AUC_WT = mean(unlist(wt)),
+           mean_AUC_CCA1 = mean(unlist(CCA1)),
+           mean_AUC_CCA2 = mean(unlist(CCA2)), 
+           mean_AUC_CCA1M = mean(unlist(CCA1_mutant)),
+           mean_AUC_CCA1WT = mean(unlist(CCA1_wt)), 
+           mean_AUC_CCA2M = mean(unlist(CCA2_mutant)),
+           mean_AUC_CCA2WT = mean(unlist(CCA2_wt)), 
+           #med_AUC_mutant = median(unlist(mutant)),
+           #med_AUC_WT = median(unlist(wt)),
+           med_AUC_CCA1 = median(unlist(CCA1)),
+           med_AUC_CCA2 = median(unlist(CCA2)),
+           AverageDifference_Mutant.WT = mean_AUC_mutant-mean_AUC_WT,
+           AverageDifference_CCA1.2 = mean_AUC_CCA1-mean_AUC_CCA2,
+           AverageDifference_CCA1M.WT = mean_AUC_CCA1M-mean_AUC_CCA1WT,
+           AverageDifference_CCA2M.WT = mean_AUC_CCA2M-mean_AUC_CCA2WT,
+           #MedianDifference_Mutant.WT = med_AUC_mutant-med_AUC_WT,
+           FC=mean_AUC_mutant/mean_AUC_WT)%>%
+    group_by(gene_P_L)%>%
+    mutate( p.val_mut = wilcox.test(unlist(mutant),unlist(wt))$p.value,p.val_cca = wilcox.test(unlist(CCA1),unlist(CCA2))$p.value)
+
+#Cal sig with in CCA for plot in specific subtype
+TTT<- mutate_all(TT, funs(replace(., .=='NULL', 0)))
+TTT<-TTT%>%group_by(gene_P_L)%>%mutate( p.val_mutwt_CCA1 = wilcox.test(unlist(CCA1_mutant),unlist(CCA1_wt))$p.value,p.val_mutwt_CCA2 = wilcox.test(unlist(CCA2_mutant),unlist(CCA2_wt))$p.value,p.val_mutCCA1CCA2 = wilcox.test(unlist(CCA1_mutant),unlist(CCA2_mutant))$p.value)
+
+TT2<- TTT%>%mutate(sig=ifelse(p.val_mut<0.055, "Mutation-associated with reduced kinase activity_p.val<0.05", "no association"))
+TT2$sig[TT$AverageDifference_Mutant.WT <(-0.5) &TT2$p.val_mut<0.055 ]<-"Mutation-associated with reduced kinase activity_p.val<0.05"
+TT2$sig[TT$AverageDifference_Mutant.WT >0.5 &TT2$p.val_mut<0.055 ]<-"Mutation-associated with enhanced kinase activity_p.val<0.05"
+
+TT2F<- TT2%>% separate(gene_P_L, c("Gene", "P","L"), sep="_") #%>%unite_( "P_L", c("P","L")) 
+
+TT2FL<-TT2F%>%mutate(Type_L=L)%>% mutate(Type_L=recode(L, IGF1="progrowth", 	
+TNFalpha="proinflammation", Anisomycin="both",EGF="progrowth", IFNgamma="proinflammation"))
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# PLOT final version  volcano mut vs WT 29122021 (all subtypes)
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+p <- ggplot(TT2, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2$sig),size = TT2$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2,gene_P_L %in% c("KRAS_pERK_EGF","KRAS_pSTAT3_EGF", "PTEN_pAKT_EGF", "FLT3_pAKT_EGF","MAP3K1_pERK_IGF1","FLT3_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","SMAD4_pRelA_TNFalpha","KRAS_pSTAT3_EGF","ATM_pS6K_IGF1","TET2_pERK_IFNgamma","GSK3B_pS6K_EGF","NOTCH2_pERK_IGF1","SMAD4_pAKT_TNFalpha","SMAD4_pAKT_Anisomycin","SMAD4_pAKT_EGF","SMAD4_pAKT_IFNgamma","SMAD4_pERK_IFNgamma","SMAD4_pERK_TNFalpha","DNMT3A_pAKT_IGF1","XIAP_pAKT_IGF1","ARID1A_pAKT_IGF1","NOTCH4_pERK_EGF","LRRK2_pERK_EGF","KRAS_RelA_TNFalpha","PTEN_RelA_TNFalpha","SETD2_RelA_TNFalpha","ARID1A_RelA_TNFalpha","SMO_RelA_TNFalpha","ATXN1_pERK_TNFalpha","SLC19A1_pERK_IGF1","SLC19A1_RelA_EGF","SLC19A1_pERK_Anisomycin","ZIM2_pAKT_IFNgamma","ZIM2_pAKT_TNFalpha","ZIM2_pERK_IFNgamma","ZIM2_pERK_TNFalpha")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt_CCA1)")
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# PLOT final version  Barplot  29122021 (all subtypes)
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS","FLT3","ARID1A","PTEN"))%>%select(Gene,P,L,AverageDifference_CCA1M.WT,AverageDifference_CCA2M.WT)
+
+#TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS","FLT3","ARID1A","PTEN"))%>%select(Gene,P,L,AverageDifference_Mutant.WT_CCA1,AverageDifference_Mutant.WT_CCA2)
+
+TT2FLMUT<-filter(TT2FLMUT,P %in%c("pERK","pAKT"))
+#map with ligand type
+TT2FLMUTn<- TT2FLMUT%>%gather(key="Type",value="AverageDifference_Mutant.WT",-Gene,-P,-L)%>% mutate(Type_L=recode(L, IGF1="progrowth", 	TNFalpha="proinflammation", Anisomycin="both",EGF="progrowth", IFNgamma="proinflammation"))%>% mutate(CCA=recode(Type, AverageDifference_CCA1M.WT="CCA1",AverageDifference_CCA2M.WT="CCA2"))
+
+TT2FLMUTnUD<-TT2FLMUTn%>%mutate(Phospho.Status= ifelse(AverageDifference_Mutant.WT>0,"enhance","reduce"))
+
+#rank by P
+TT2FLMUTnr<-TT2FLMUTnUD%>%mutate(CCA2=CCA)%>%mutate(L2=L)%>%unite_( "L_CCA", c("L2","CCA2"))   
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 10
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+
+library(tidyr)
+library(ggplot2)
+library(tidytext)
+p<-ggplot(data=TT2FLMUTnr, aes(reorder_within(Gene,P,L_CCA), AverageDifference_Mutant.WT,fill=L_CCA)) +
+    geom_bar(stat="identity")
+p+facet_grid(Gene~P)+theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_fill_discrete(drop=F)+scale_fill_manual(values = mycolors)
+#Final
+TT2FLMUTnr %>%
+    group_by(Gene,P) %>%
+    ungroup %>%
+    mutate(L_CCA= as.factor(L_CCA),
+           name = reorder_within(L, AverageDifference_Mutant.WT, Gene)) %>%
+    ggplot(aes(name, AverageDifference_Mutant.WT, fill = L_CCA))+geom_bar( position = "dodge",stat="identity")+facet_wrap(Gene~P,scales = "free_x")+theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_fill_discrete(drop=F)+scale_fill_manual(values = mycolors)+
+    scale_x_reordered() +
+    scale_y_continuous(expand = c(0,0))+xlab("")+ labs(fill='Ligands & CCA subtypes') 
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#manual order barplot
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS"))%>%select(Gene,P,L,AverageDifference_CCA1M.WT,AverageDifference_CCA2M.WT)
+
+#TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS","FLT3","ARID1A","PTEN"))%>%select(Gene,P,L,AverageDifference_Mutant.WT_CCA1,AverageDifference_Mutant.WT_CCA2)
+
+TT2FLMUT<-filter(TT2FLMUT,P %in%c("pERK"))
+#map with ligand type
+TT2FLMUTn<- TT2FLMUT%>%gather(key="Type",value="AverageDifference_Mutant.WT",-Gene,-P,-L)%>% mutate(Type_L=recode(L, IGF1="progrowth", 	TNFalpha="proinflammation", Anisomycin="both",EGF="progrowth", IFNgamma="proinflammation"))%>% mutate(CCA=recode(Type, AverageDifference_CCA1M.WT="CCA1",AverageDifference_CCA2M.WT="CCA2"))
+
+TT2FLMUTnUD<-TT2FLMUTn%>%mutate(Phospho.Status= ifelse(AverageDifference_Mutant.WT>0,"enhance","reduce"))
+
+#rank by P
+TT2FLMUTnr<-TT2FLMUTnUD%>%mutate(CCA2=CCA)%>%mutate(L2=L)%>%unite_( "L_CCA", c("L2","CCA2"))   
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 35
+mycolors <- colorRampPalette(brewer.pal(35, "Paired"))(nb.cols)
+TT2FLMUTnr$L <- factor(TT2FLMUTnr$L, levels = c('EGF', 'IFNgamma','TNFalpha','IGF1', 'Anisomycin'))
+
+library(tidyr)
+library(ggplot2)
+library(tidytext)
+p<-ggplot(data=TT2FLMUTnr, aes(L, AverageDifference_Mutant.WT,fill=L_CCA)) +
+    geom_bar(stat="identity", position = 'dodge')
+p+facet_grid(Gene~P)+theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_fill_discrete(drop=F)+scale_fill_manual(values = mycolors)+xlab("")+ labs(fill='Ligands & CCA subtypes') +facet_wrap(Gene~P,scales = "free_x")
+
+
+
+
+
+#recalculate bar plot mut vs WT all
+
+setwd("G:/My Drive/Milk CCA/All Final for paper/Figure/High Resolution/final/Draft 28/Phospho profile")
+#data <- read.csv("AUC_table.csv")
+#option1
+TT2FLRP<- read.csv("21012021.csv")
+TT2FLRP<-TT2FLRP%>%separate(gene_P_L, c("Gene", "P","L"), sep="_")
+
+
+#TBP
+TT2FLMUT2<-filter(TT2FLRP,Gene %in%c("KRAS"))%>%select(Gene,P,L,AverageDifference_CCA1M.ALL,AverageDifference_CCA2M.ALL)
+ TT2FLMUT2$AverageDifference_CCA2M.ALL <- as.numeric(TT2FLMUT2$AverageDifference_CCA2M.ALL)
+
+
+
+#TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS","FLT3","ARID1A","PTEN"))%>%select##(Gene,P,L,AverageDifference_Mutant.WT_CCA1,AverageDifference_Mutant.WT_CCA2)
+
+TT2FLMUT2<-filter(TT2FLMUT2,P %in%c("pERK"))
+#map with ligand type
+TT2FLMUTn2<- TT2FLMUT2%>%gather(key="Type",value="AverageDifference_Mutant.WT",-Gene,-P,-L)%>% mutate(Type_L=recode(L, IGF1="progrowth", 	TNFalpha="proinflammation", Anisomycin="both",EGF="progrowth", IFNgamma="proinflammation"))%>% mutate(CCA=recode(Type, AverageDifference_CCA1M.WT="CCA1",AverageDifference_CCA2M.WT="CCA2"))
+
+TT2FLMUTnUD2<-TT2FLMUTn2%>%mutate(Phospho.Status= ifelse(AverageDifference_Mutant.WT>0,"enhance","reduce"))
+
+#rank by P
+TT2FLMUTnr2<-TT2FLMUTnUD2%>%mutate(CCA2=CCA)%>%mutate(L2=L)%>%unite_( "L_CCA", c("L2","CCA2"))   
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 10
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+TT2FLMUTnr2$L <- factor(TT2FLMUTnr2$L, levels = c('IGF1', 'IFNgamma','EGF', 'Anisomycin','TNFalpha'))
+library(tidyr)
+library(ggplot2)
+library(tidytext)
+p<-ggplot(data=TT2FLMUTnr2, aes(L, AverageDifference_Mutant.WT,fill=L_CCA)) +
+    geom_bar(stat="identity", position = 'dodge')
+p+facet_grid(Gene~P)+theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_fill_discrete(drop=F)+scale_fill_manual(values = mycolors)+xlab("")+ labs(fill='Ligands & CCA subtypes') +facet_wrap(Gene~P,scales = "free_x")
+
+
+
+# bar plot 24012022 color lab
+TT2FLMUT2<-filter(TT2FLRP,Gene %in%c("PTEN"))%>%select(Gene,P,L,AverageDifference_CCA1M.ALL,AverageDifference_CCA2M.ALL)
+TT2FLMUT2$AverageDifference_CCA2M.ALL <- as.numeric(TT2FLMUT2$AverageDifference_CCA2M.ALL)
+
+
+
+#TT2FLMUT<-filter(TT2FL,Gene %in%c("KRAS","FLT3","ARID1A","PTEN"))%>%select##(Gene,P,L,AverageDifference_Mutant.WT_CCA1,AverageDifference_Mutant.WT_CCA2)
+
+TT2FLMUT2<-filter(TT2FLMUT2,P %in%c("pAKT"))
+#map with ligand type
+TT2FLMUTn2<- TT2FLMUT2%>%gather(key="Type",value="AverageDifference_Mutant.WT",-Gene,-P,-L)%>% mutate(Type_L=recode(L, IGF1="progrowth", 	TNFalpha="proinflammation", Anisomycin="both",EGF="progrowth", IFNgamma="proinflammation"))%>% mutate(CCA=recode(Type, AverageDifference_CCA1M.ALL="CCA1",AverageDifference_CCA2M.ALL="CCA2"))
+
+TT2FLMUTnUD2<-TT2FLMUTn2%>%mutate(Phospho.Status= ifelse(AverageDifference_Mutant.WT>0,"enhance","reduce"))
+
+#rank by P
+TT2FLMUTnr2<-TT2FLMUTnUD2%>%mutate(CCA2=CCA)%>%mutate(L2=L)%>%unite_( "L_CCA", c("L2","CCA2"))   
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 10
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+TT2FLMUTnr2$L <- factor(TT2FLMUTnr2$L, levels = c('EGF','TNFalpha', 'Anisomycin','IFNgamma','IGF1'))
+library(tidyr)
+library(ggplot2)
+library(tidytext)
+p<-ggplot(data=TT2FLMUTnr2, aes(L, AverageDifference_Mutant.WT,fill=CCA)) +
+    geom_bar(stat="identity", position = 'dodge')
+p+facet_grid(Gene~P)+theme_bw()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_fill_discrete(drop=F)+scale_fill_manual(values=c("#33FFFF","orange"))+xlab("")+ labs(fill='Ligands & CCA subtypes') +facet_wrap(~Gene)+ylab("pAKT(mut - WT)")+ylim(-0.9,1.75)+theme(legend.position="none")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# PLOT final version  Volcano   29122021 (all subtypes label color by unique subtype)
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+mergeDFn <- inner_join(mut3, data, by = "cellline",all=TRUE)%>%filter(Proteins!="FoxO3a")%>%filter(Proteins!="pRelA")%>%filter(Proteins!="pSTAT3")%>%mutate(status2.2=status2,Subtype2=Subtype)%>%unite_( "mut_type", c("status2.2","Subtype2")) 
+
+#subtract by  minimun MedAUC 1.4513681
+#mergeDFn$Scale_MedAUC<- mergeDFn$Scale_MedAUC+1.4513681
+#mergeDFn$Scale_MedAUC<- log10(mergeDFn$Scale_MedAUC)
+
+tDFn<- mergeDFn%>%
+    select(P_L,Scale_MedAUC, Subtype, X,mut_type) %>% 
+    group_by(X,P_L,mut_type) %>%
+    summarise(Scale_MedAUC = list(Scale_MedAUC)) %>%
+    group_by(X,P_L,mut_type)  %>%
+    spread(mut_type,Scale_MedAUC) %>% unite_( "gene_P_L", c("X","P_L")) %>%mutate(l_mutant_CCA1 = lengths(mutant_CCA1))%>%mutate(l_WT_CCA1 = lengths(wt_CCA1)) %>%mutate(l_mutant_CCA2 = lengths(mutant_CCA2))%>%mutate(l_WT_CCA2 = lengths(wt_CCA2))
+
+#TT4_fil <- TT4_fil[!TT4_fil$wt == "NULL", ] 
+#tDFn[is.na(tDFn)] <- 0
+#tDFn <- tDFn %>% replace(.=="NULL", NA) 
+tDFn2 <- mutate_all(tDFn, funs(replace(., .=='NULL', 0)))
+
+
+TTn<-tDFn2%>%group_by(gene_P_L)%>%
+    mutate(mean_AUC_mutant_CCA1 = mean(unlist(mutant_CCA1)),
+           mean_AUC_mutant_CCA2 = mean(unlist(mutant_CCA2)),
+           mean_AUC_WT_CCA1 = mean(unlist(wt_CCA1)),
+           mean_AUC_WT_CCA2 = mean(unlist(wt_CCA2)),
+           AverageDifference_Mutant.WT_CCA1 = mean_AUC_mutant_CCA1-mean_AUC_WT_CCA1,
+           AverageDifference_Mutant.WT_CCA2 = mean_AUC_mutant_CCA2-mean_AUC_WT_CCA2,
+           AverageDifference_Mutant.CCA1_CCA2 = mean_AUC_mutant_CCA1-mean_AUC_mutant_CCA2)
+
+TTn2<-TTn%>%group_by(gene_P_L)%>%mutate( p.val_mutwt_CCA1 = wilcox.test(unlist(mutant_CCA1),unlist(wt_CCA1))$p.value,p.val_mutwt_CCA2 = wilcox.test(unlist(mutant_CCA2),unlist(wt_CCA2))$p.value,p.val_mutCCA1CCA2 = wilcox.test(unlist(mutant_CCA1),unlist(mutant_CCA2))$p.value)
+
+#start wit TTn2
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#Plot sig CCA1
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+TTn3<- TTn2%>%mutate(sig=ifelse(p.val_mutwt_CCA1<0.055, "Mutation-associated with reduced kinase activity_p.val<0.05", "no association"))
+TTn3$sig[TTn3$AverageDifference_Mutant.WT_CCA1 <(-0.1) &TTn3$p.val_mutwt_CCA1<0.055 ]<-"Mutation-associated with reduced kinase activity_p.val<0.05"
+TTn3$sig[TTn3$AverageDifference_Mutant.WT_CCA1 >0.1 &TTn3$p.val_mutwt_CCA1<0.055 ]<-"Mutation-associated with enhanced kinase activity_p.val<0.05"
+
+#plot volcano
+p <- ggplot(TTn3, aes(AverageDifference_Mutant.WT_CCA1, -log10(p.val_mutwt_CCA1)))+geom_point()+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TTn3,p.val_mutwt_CCA1<=0.055& abs(AverageDifference_Mutant.WT_CCA1) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()
+
+#plot volcano label sig
+p <- ggplot(TTn3, aes(AverageDifference_Mutant.WT_CCA1,  -log10(p.val_mutwt_CCA1)))+geom_point(aes(colour = factor(TTn3$sig),size = TTn3$l_mutant_CCA1, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TTn3,p.val_mutwt_CCA1<=0.055& abs(AverageDifference_Mutant.WT_CCA1) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt_CCA1)")
+
+#plot volcano label gene CCA1
+p <- ggplot(TTn3, aes(AverageDifference_Mutant.WT_CCA1,  -log10(p.val_mutwt_CCA1)))+geom_point(aes(colour = factor(TTn3$sig),size = TTn3$l_mutant_CCA1, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TTn3,gene_P_L %in% c("KRAS_pERK_EGF","KRAS_pSTAT3_EGF", "PTEN_pAKT_EGF", "FLT3_pAKT_EGF","ERBB2_pERK_EGF","MAP2K2_pERK_EGF","MAP3K1_pERK_IGF1","FLT3_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","SMAD4_pRelA_TNFalpha","KRAS_pSTAT3_EGF","IKBKB_pERK_TNFalpha","ATM_pS6K_IGF1","FOXA3_pS6K_IGF1","GSK3B_pS6K_IGF1","MAP2K1_pAKT_EGF","NF1_pAKT_TNFalpha","PDGFRA_pAKT_EGF","KCNN3_pERK_TNFalpha","NOTCH4_pERK_TNFalph","ABCC8_pERK_IFNgamma","CSMD1_pERK_IFNgamma","TBP_pS6K_EGF","ABCC8_pAKT_TNFalpha","KRAS_pAKT_TNFalpha","ARID1A_pS6K_TNFalpha","BTG1_pS6K_TNFalpha","ABCC8_RelA_Anisomycin")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt_CCA1)")
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#Plot CCA2
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#lable by sig CCA2
+TTn4<- TTn2%>%mutate(sig=ifelse(p.val_mutwt_CCA2<0.055, "Mutation-associated with reduced kinase activity_p.val<0.05", "no association"))
+TTn4$sig[TTn4$AverageDifference_Mutant.WT_CCA2 <(-0.1) &TTn4$p.val_mutwt_CCA2<0.055 ]<-"Mutation-associated with reduced kinase activity_p.val<0.05"
+TTn4$sig[TTn4$AverageDifference_Mutant.WT_CCA2 >0.1 &TTn4$p.val_mutwt_CCA2<0.055 ]<-"Mutation-associated with enhanced kinase activity_p.val<0.05"
+
+#plot volcano
+p <- ggplot(TTn4, aes(AverageDifference_Mutant.WT_CCA2, -log10(p.val_mutwt_CCA2)))+geom_point()+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TTn4,p.val_mutwt_CCA2<=0.055& abs(AverageDifference_Mutant.WT_CCA2) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()
+
+#plot volcano label sig
+p <- ggplot(TTn4, aes(AverageDifference_Mutant.WT_CCA2,  -log10(p.val_mutwt_CCA2)))+geom_point(aes(colour = factor(TTn4$sig),size = TTn4$l_mutant_CCA2, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TTn4,p.val_mutwt_CCA2<=0.055& abs(AverageDifference_Mutant.WT_CCA2) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt_CCA2)")
+
+#join dataframe
+CCA1<-TTn3%>%mutate(type=paste("CCA1"))%>% select(gene_P_L,sig,type)%>%filter(sig %in% c("Mutation-associated with reduced kinase activity_p.val<0.05","Mutation-associated with enhanced kinase activity_p.val<0.05"))
+CCA2<-TTn4%>%mutate(type=paste("CCA2"))%>% select(gene_P_L,sig,type)%>%filter(sig %in% c("Mutation-associated with reduced kinase activity_p.val<0.05","Mutation-associated with enhanced kinase activity_p.val<0.05"))
+
+#find shared gene
+joinCCA<-full_join(CCA1,CCA2)%>%separate(gene_P_L, c("Gene", "P","L"), sep="_")%>%unite_( "P_L", c("P","L")) 
+#total gene = 109
+joinCCA2<-joinCCA%>%spread(key=type,value=sig)
+joinCCA2[is.na(joinCCA2)] <- " "
+joinCCA3<-joinCCA2%>%mutate(l = lengths(CCA1)+lengths(CCA2))
+
+
+
+
+#Plot volcano 
+
+
+
+TTn3.2<-TTn3%>%mutate(MutGType=c("Cal_CCA1"))
+TTn4.2<-TTn4%>%mutate(MutGType=c("Cal_CCA2"))
+
+JTTn3_TTn4<-full_join(TTn3.2,TTn4.2)
+
+#find unique
+
+JTTn3_TTn4_U<-JTTn3_TTn4%>%mutate(uni=ifelse(l_mutant_CCA1<=0, "unique CCA2", "common"))
+JTTn3_TTn4_U$uni[JTTn3_TTn4_U$l_mutant_CCA2<=0 ]<-"unique CCA1"
+
+
+#Plot volcano CCA1+CCA2
+#map TT2 with type of matated gene
+Uni_map<-JTTn3_TTn4_U%>%select(gene_P_L,uni)
+TT2_Uni<-  TT2_Uni<-inner_join(TT2,Uni_map)
+TT2_Uni<-distinct(TT2_Uni)%>%mutate(collab1=uni,collab2=sig)%>%unite_( "U_S", c("collab1","collab2"))
+#new map
+#TT2_Uni<-TT2_Uni%>%mutate(collab1=uni,collab2=sig)%>%unite_( "U_S", c("collab1","collab2"))%>%mutate(CollabL=recode(U_S,	
+#unique CCA2_no association=" no asscociation", unique CCA1_no association="o asscociation", common_no association="o asscociation",  unique CCA1_Mutation-associated with enhanced kinase activity_p.val<0.05="unique #CCA1_enhance"),unique CCA2_Mutation-associated with enhanced kinase activity_p.val<0.05="unique CCA2_enhance",common_Mutation-associated with enhanced kinase activity_p.val<0.05="common_enhance",unique #CCA1_Mutation-associated with reduced kinase activity_p.val<0.05="unique CCA1_reduced "),unique CCA2_Mutation-associated with reduced ced kinase activity_p.val<0.05="unique CCA2_reduced ",common_Mutation-associated #with reduced ced kinase activity_p.val<0.05="common_reduced " ))
+
+
+#plot bot subtyp join map with unique col
+
+p <- ggplot(TT2_Uni, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2_Uni$sig),size =TT2_Uni$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2_Uni,p.val_mut<=0.055& abs(AverageDifference_Mutant.WT) >0.01),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()
+
+#plot volcano label gene both
+#plot volcano label gene CCA1
+p <- ggplot(TT2_Uni, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2_Uni$U_S),size = TT2_Uni$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2_Uni,gene_P_L %in% c("KRAS_pERK_EGF","KRAS_pSTAT3_EGF", "PTEN_pAKT_EGF", "FLT3_pAKT_EGF","MAP3K1_pERK_IGF1","FLT3_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","SMAD4_pRelA_TNFalpha","KRAS_pSTAT3_EGF","ATM_pS6K_IGF1","FOXA3_pS6K_IGF1","GSK3B_pS6K_IGF1")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt")+scale_color_manual(values=c("violetred1", "orchid1", "slategray4","royalblue","turquoise3","slategray4","chocolate1","darkgoldenrod1","slategray4"))
+
+#:::::::::::::::::::::
+
+
+TT2_Uni<-TT2_Uni%>%filter(l_mutant>2)
+
+p <- ggplot(TT2_Uni, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2_Uni$U_S),size = TT2_Uni$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2_Uni,gene_P_L %in% c("KRAS_pERK_EGF","KRAS_pSTAT3_EGF", "PTEN_pAKT_EGF", "FLT3_pAKT_EGF","MAP3K1_pERK_IGF1","FLT3_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_EGF","FLT3_pAKT_EGF","SMAD4_pRelA_TNFalpha","KRAS_pSTAT3_EGF","ATM_pS6K_IGF1","TET2_pERK_IFNgamma","GSK3B_pS6K_EGF","NOTCH2_pERK_IGF1","SMAD4_pAKT_TNFalpha","SMAD4_pAKT_Anisomycin","SMAD4_pAKT_EGF","SMAD4_pAKT_IFNgamma","SMAD4_pERK_IFNgamma","SMAD4_pERK_TNFalpha","DNMT3A_pAKT_IGF1","XIAP_pAKT_IGF1","ARID1A_pAKT_IGF1","NOTCH4_pERK_EGF","LRRK2_pERK_EGF","KRAS_RelA_TNFalpha","PTEN_RelA_TNFalpha","SETD2_RelA_TNFalpha","ARID1A_RelA_TNFalpha","SMO_RelA_TNFalpha","ATXN1_pERK_TNFalpha","SLC19A1_pERK_IGF1","SLC19A1_RelA_EGF","SLC19A1_pERK_Anisomycin","ZIM2_pAKT_IFNgamma","ZIM2_pAKT_TNFalpha","ZIM2_pERK_IFNgamma","ZIM2_pERK_TNFalpha")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt")+scale_color_manual(values=c("violetred1", "orchid1", "slategray4","cyan3","cyan","slategray4","chocolate1","darkgoldenrod1","slategray4"))
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#final plot 07012022
+
+
+
+TT2_Uni<-TT2_Uni%>%filter(l_mutant>2)
+
+mutlab<-TT2_Uni%>%select(-mutant,-wt,-CCA1,-CCA2,-CCA1_mutant,-CCA1_wt, -CCA2_mutant,-CCA2_wt)
+
+#write.table(as.data.frame(mutlab),file="G:/My Drive/Milk CCA/All Final for paper/Figure/High Resolution/final/Draft 28/Phospho profile/21012021.csv" ,sep=",")
+
+
+
+
+
+p <- ggplot(TT2_Uni, aes(AverageDifference_Mutant.WT,  -log10(p.val_mut)))+geom_point(aes(colour = factor(TT2_Uni$U_S),size = TT2_Uni$l_mutant, alpha = 0.1))+xlim(-3,3)+geom_text_repel(data=dplyr::filter(TT2_Uni,gene_P_L %in% c("KRAS_pERK_EGF","TBP_pAKT_IGF1", "PTEN_pAKT_EGF", "LRP1B_pAKT_EGF","ERBB2_pERK_Anisomycin","LRP1B_pERK_IGF1","PIK3C2B_pAKT_EGF","PTEN_pAKT_TNFalpha","SLC19A1_pERK_IGF1","TP53_pAKT_Anisomycin","ATXN1_pAKT_Anisomycin","TET2_pERK_IFNgamma","SMAD4_pAKT_TNFalpha","STK11_pAKT_Anisomycin")),aes(label=gene_P_L),size=4,box.padding = unit(0.35, "lines"),point.padding = unit(0.3, "lines"))
+p+theme_classic()+ylab("-log10(p.val_mutwt")+scale_color_manual(values=c("violetred1", "orchid1", "slategray4","cyan3","cyan","slategray4","chocolate1","darkgoldenrod1","slategray4"))
+
+```
+
