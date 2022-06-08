@@ -1,0 +1,1465 @@
+---
+title: "Module1"
+author: "Patipark Kueanjinda"
+date: "October 10, 2018; last modified on June 8, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Call necessary R packages.
+```{r}
+require(tidyverse)
+require(DOSE)
+require(clusterProfiler)
+require(enrichplot)
+require(org.Hs.eg.db)
+```
+
+Download all data tables.
+```{r}
+# open working folder
+setwd('C:/Users/patipark/Dropbox/CCA manuscript/Final/draft 20/GitData/Patipark/Data/module1_data')
+
+# 1. Gene expression data (RAW format)
+df <- read.csv('Gene_Expression_Matrix_20190104.csv', header = TRUE, stringsAsFactors = FALSE)
+# 1.2 Gene expression data (Batch effect removal, log2TPM format)
+df.b <- read.csv('median_log2tpm_combat_PB_2019-03-26.csv', header = TRUE, stringsAsFactors = FALSE)
+# 2. Median-Centered GR50  for sensitivity classification
+myGR50 <- read.csv('Median_centered_GR50_12102018.csv', header = TRUE, stringsAsFactors = FALSE) 
+# 3. Parameters from dose response curves of all drugs
+newGR50 <- read.csv('DrugResponseData_01102018.csv', header = TRUE, stringsAsFactors = FALSE)
+# 4. Category of each hallmark table
+HM_Category <- read.csv('Hallmark_Category.csv', header = TRUE, stringsAsFactors = FALSE)
+# 5. Category of all drug targets
+drugtarget <- read.csv('Drug_Target.csv', header = TRUE, stringsAsFactors = FALSE)
+# 6. Node sizes corresponding to drug efficacy compared to standard-of-care drugs from Figure 3C
+nodeSize <- read.csv('SizeofNodeinCCASubtype.csv', header = TRUE, stringsAsFactors = FALSE) %>% `colnames<-`(.,c('Drug','CCA.Subtype1','CCA.Subtype2'))
+```
+
+Data pre-processing steps
+Removel white space in the columns in GR50 table
+```{r}
+myGR50$X <- trimws(myGR50$X)
+```
+
+Modify names of CCA cell lines obtained from CSV table to meet conventional names
+```{r}
+# call 'reshape2' package
+require(reshape2)
+# transform log2TPM expression levels of genes from wide to long table
+df.m <- melt(df.b,id.vars = c('Symbol'), variable.name = c('ID'), value.name = c('TPM'))
+# call 'stringr' package
+require(stringr)
+# get unique cell names
+orig.cellnames <- unique(df.m$ID)
+# split string into two and keep first set
+a <- sapply(str_split(df.m$ID, '_', n = 2),'[',1)
+# get strings split by '_' into table
+ids <- as.data.frame(str_split(a, '_', simplify = TRUE))
+# replace '.' with '-'
+ids$Cell <- str_replace(string = ids$V1,pattern = '\\.', replacement = '-')
+# assign column names
+ids <- ids %>% select_(.dots = c('Cell'))
+# add column to df.m
+df.m <- tibble::add_column(df.m, ids$Cell, .after = 1)
+# remove 'ID' column
+df.m <- df.m[,-c(which(colnames(df.m) == 'ID'))]
+# rename columns
+colnames(df.m) <- c('Gene','Cell','TPM')
+```
+
+To compare expression level, we divided cell lines into 2 groups by their response to comprehensive drugs (CCA1 and CCA2).
+Average (log2TMP) of gene expression level per gene per cell line would be calculated and duplicates were eliminated.
+Genes with average expression levels less than 50th quantile were removed.
+```{r}
+# define CCA cell lines into drug response subtypes (according to data from Figure 3A)
+CCA.S1 <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138')
+CCA.S2 <- c('KKU-055','KKU-100','KKK-D068','KKK-D131','HuCCT-1','SSP-25','TFK-1','YSCCC','HuH-28')
+# Combind subgroup 1 + subgroup 2
+cell.CCA <- c(CCA.S1,CCA.S2)
+# Subset CCA cells (subgroup 1+2) and calculate mean expression value (by gene symbol+cell)
+df.mat <- df.m %>% subset(Cell %in% cell.CCA) %>% group_by(Gene, Cell) %>% summarize(TPM.m = mean(TPM))
+# Calculate QT50 from log2 of mean TPM 
+df.mat <- df.mat %>% group_by(Gene) %>% mutate(QT50 = quantile(TPM.m,0.5))
+# Remove genes whose QT50 < 0 and remove QT50 column
+df.mat5 <- df.mat %>% subset(QT50 > 0) %>% select_(.dots = c('Gene','Cell','TPM.m')) 
+```
+
+Number of genes post-processing
+```{r}
+# number of genes
+length(unique(df.mat5$Gene))
+```
+
+In general, gene expression levels are reported as the fold-change of expression level of cases compared to controls.
+In this study, however, the controls were defined as median expression level across all CCA cell lines. 
+(Normal cholangiocyte gene expression data were not included.) 
+Hence, fold-change expression level of genes in each cell line was calculated from comparison of the expression level of the gene of a cell line to median expression level of the same gene across all cell lines.
+```{r}
+# function for normalization using group median expression value
+normfun <- function(D) {
+  d <- as.numeric(D)
+  row.median <- median(d)
+  row.value <- (d - row.median)
+}
+```
+
+Now, we converted from log2TPM to median-centered expression level.
+```{r}
+# normalize with median of gene group using 'normfun' function
+df.mat5 <- df.mat5 %>% group_by(Gene) %>% mutate(TPM.z = normfun(TPM.m))
+```
+
+In the next step, we wanted to use GSEA for pathway analysis. 
+In general, GSEA requires input data including gene expression levels from A compared to B. 
+Thus, we defined A as CCA1 group (n = 6) and B as CCA2 group (n = 9), according to analysis in Figure 3A. 
+Because median value is less affected by ouliers and represented nearly true value of the population, we calculated median expression level of genes in each subtype and converted to fold-change expression level of genes (FC = median A/ median B).
+```{r}
+# Assign drug response subtypes of cell lines
+Cell.subgroup <- ifelse(df.mat5$Cell %in% CCA.S1, 1, 2)
+# Add subtype column
+df.mat5 <- tibble::add_column(df.mat5, Cell.subgroup, .after = 2)
+```
+
+Because we were also interested in cell line-organ similarity, we created organ similarity category.
+```{r}
+# Add organ status to cell lines according to data from Figure 1C
+PancsCCA <- c('KKK-D131', 'KKU-156', 'KKU-213', 'KKU-214', 'HuCCA-1', 'TFK-1', 'YSCCC', 'HuCCT-1')
+LiverCCA <- c('RBE', 'HuH-28', 'KKU-100', 'KKK-D138', 'SSP-25', 'KKK-D068', 'KKU-055')
+OrgStat <- c(PancsCCA,LiverCCA)
+
+
+# We defined liver-like CCA as 2 or (R) and pancreas-like CCA as 1 or S.
+Org.subgroup <- ifelse(df.mat5$Cell %in% PancsCCA, 1, 2)
+
+df.mat5 <- tibble::add_column(df.mat5, Org.subgroup, .after = 3)
+```
+
+Drug sensitivity determination
+
+GR50 values (in log10 format from Figure 2A) were used determine whether the cell lines were sensitive or resistant to a particular drug. Regardless of distribution of GR50, median GR50 of the population was calculated for a particular drug. We hypothesized that gene expression profiles of drug with large IQR would exhibit binomial distribution. 
+
+Pre-process newGR50 to have similar table format as myGR50
+Pseudo-codes
+1. Obtain GR50 values of each cell line from different drug treatments
+2. Because some cells are resistant to the drug that the other, we calculate median-centered GR50 values.
+3. 
+```{r}
+# Create temp matrix
+newGR50.2 <- newGR50
+# Subset data by cell lines and select columns of cells (cell_line), drugs (agent), and median-centered GR50 values (SubMedianGR50)
+g1 <- newGR50.2 %>% subset(cell_line %in% cell.CCA) %>% dplyr::select(c('cell_line','agent','SubMedianGR50'))
+# call 'magrittr' package
+require(magrittr)
+# reshape table from wide to long
+g2 <- reshape2::dcast(g1, cell_line ~ agent, value.var = 'SubMedianGR50')
+# change column 1 header
+colnames(g2)[1] <- c('Cell')
+
+# Any drugs with variance lower than 20th quantile were removed from the list.
+g2 <- tibble::column_to_rownames(g2, var = 'Cell')
+# calculate variance of GR50 of each drug
+drug.var <- apply(g2, 2, var)
+# use Qantile 20th as a cut-off
+qntl <- quantile(drug.var, 0.2)
+# index 0 var drug
+zero.var <- which(drug.var < qntl)
+# remove zero-variance drugs from g2
+if(length(zero.var) != 0){
+  g2 <- g2[,-c(zero.var)]
+} else {
+  g2 <- g2
+}
+
+g3 <- apply(g2,2,scale) %>% as.data.frame()
+rownames(g3) <- rownames(g2)
+
+```
+
+As a result, there are 80 drugs remaining for further analysis
+```{r}
+length(colnames(g3))
+```
+
+To identify cut-off point dividing sensitiveness or resistance of the cell to a particular drug, we used kernel density estimation method.
+```{r}
+# https://stackoverflow.com/questions/56612670/compute-youden-index-from-two-density-plot
+# kde.int <- function(g3) {
+  # identify drug names
+  drugs <- colnames(g3)
+  # get a total number of drugs
+  no.drugs <- length(drugs)
+  
+  cf <- lapply(1:no.drugs, function(i) {
+    # extrat drug subset
+    df <- g3 %>% dplyr::select(drugs[i])
+
+    # define 'S' for sensitive and 'R' for resistant group
+    # because the GR50 values were already median-centered, 
+    # in general, any cells whose SubMedianGr50 is lower than 0 are categorized as drug sensitive cell lines
+    df$Class <- ifelse(df[,1] < 0, 'S','R')
+    # find a total number of cells in each group
+    no.S <- length(which(df[,2] == 'S'))
+    no.R <- length(which(df[,2] == 'R'))
+    # because n = 2 is required for KDE, a replicate row of GR50 values of the cell line was created.
+    if(no.S <= 1){
+      df <- rbind(df,df[which(df[,2] == 'S'),])
+    } else if (no.R <= 1){
+      df <- rbind(df,df[which(df[,2] == 'R'),])
+    } else {
+      df <- df
+    }
+    # change colname header
+    colnames(df)[1] <- 'medGR50'
+    # find min and max SubMedianGR50
+    lo <- min(df[,1])
+    up <- max(df[,1])
+    
+    # bw <- 2 * IQR(df[,1]) / length(df[,1])^(1/3)
+    # calculate estimation using density fuction from 'stats' R package
+    # d1 is for drug sensitive group
+    d1 <- density(df[,1][df[,2] == 'S'], 
+                  kernel = c('gaussian'),
+                  from = lo, to = up, n = 2^10)
+    # d2 is for drug resistant group
+    d2 <- density(df[,1][df[,2] == 'R'],  
+                  kernel = c('gaussian'),
+                  from = lo, to = up, n = 2^10)
+    # join the x and y coordinates
+    intersection.point <- cbind(x = d1$x[which(diff((d2$y - d1$y) > 0) != 0) + 1], 
+                                y = d1$y[which(diff((d2$y - d1$y) > 0) != 0) + 1])
+    # convert to dataframe
+    intersection.point <- as.data.frame(intersection.point)
+    # calculate median of 'S' group
+    med <- df %>% group_by(Class) %>% summarise(med.value = median(medGR50))
+
+    # select one X that is in the middle of medians of S and R
+    # intersection.point <- intersection.point[which(intersection.point$x == min(intersection.point$x)),]
+    intersection.point <- intersection.point[intersection.point$x > med$med.value[med$Class == 'S'] &
+                                             intersection.point$x < med$med.value[med$Class == 'R']   
+                                             ,]
+    if (nrow(intersection.point) > 1){
+      intersection.point <- intersection.point[intersection.point$x == min(intersection.point$x),]
+    } else {
+      intersection.point <- intersection.point
+    }
+    # name the drug
+    name.drug <- drugs[i]
+    
+    df.out <- data.frame('Drug' = as.character(name.drug),
+                         'Cutoff' = as.numeric(intersection.point$x))
+    
+    return(df.out)
+  })
+  cf.out <- do.call(rbind,cf)
+# }
+```
+
+Cut-off points for drug sensitivity estimation were reported as Table S3
+
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA manuscript/Final/draft 20/GitData/Patipark/Results/module1_results/Tables')
+write.csv(cf.out,file = 'Cutoff_GR50_alldrugs_20191009.csv',quote = FALSE,row.names = FALSE)
+```
+
+Density plots of drug sensitive and drug resistant CCA cell lines using previously calculated cut-off points.
+```{r}
+# call 'ggstance' package
+require(ggstance)
+
+for(i in 1:no.drugs){
+  drugs <- colnames(g3)
+  
+  df <- g3 %>% dplyr::select(drugs[i])
+  
+  # define 'S' and 'R'
+  # Because the values were subtracted by median, cell's SubMedianGr50 < 0 means sensitive and vice versa 
+  df$Class <- ifelse(df[,1] < 0, 'S','R')
+  
+  cutoff <- cf.out$Cutoff[cf.out$Drug == drugs[i]]
+  
+  df.s <- df %>% subset(Class == 'S')
+  df.r <- df %>% subset(Class == 'R')
+  
+  gd <- ggplot() +
+    geom_boxploth(data = df.s,
+                  aes(x = df.s[,1],
+                      y = -0.15,
+                      color = Class), width = 0.1) +
+    geom_boxploth(data = df.r,
+                  aes(x = df.r[,1],
+                      y = -0.15,
+                      color = Class), width = 0.1) +
+    geom_density(data = df,
+                 aes(x = df[,1],
+                     color = Class),
+                 position = 'identity') +
+    geom_point(data = df,
+               aes(x = df[,1],
+                   y = 0,
+                   color = Class)) +
+    scale_color_manual(values = c('S' = 'cyan','R' = 'orange')) +
+    geom_vline(xintercept = cutoff, linetype = 'dotted') +
+    theme_bw() +
+    labs(x = 'Median-centered GR50',
+         y = 'Density',
+         title = as.character(drugs[i]))
+  
+  drug.name <- drugs[i]
+  # print(gd)
+  setwd('C:/Users/patipark/Dropbox/CCA manuscript/Final/draft 20/GitData/Patipark/Results/module1_results/Figures/KDE')
+  ggsave(gd, 
+         filename = paste0(drugs[i],'.pdf'),
+         height = 7,
+         width = 8,
+         units = 'cm',
+         device = cairo_pdf
+         )
+  
+}
+
+```
+
+
+```{r}
+dtclass <- lapply(1:no.drugs, function(i) {
+  
+  drugs <- colnames(g3)
+  # g3 has SubMedianGR50
+  df <- newGR50.2 %>% dplyr::select(cell_line,agent,SubMedianGR50) %>% subset(agent == drugs[i])
+  
+  # define 'S' and 'R'
+  # Because the values were subtracted by median, cell's SubMedianGr50 < 0 means sensitive and vice versa 
+  df$Class.MD <- ifelse(df$SubMedianGR50 < 0, 'S','R')
+
+  # newGR50.2
+  dt <- newGR50.2 %>% dplyr::select(cell_line,agent,SubMedianGR50) %>% subset(agent == drugs[i])
+  cutoff <- cf.out$Cutoff[cf.out$Drug == drugs[i]]
+  
+  dt$Class.KDE <- ifelse(dt$SubMedianGR50 < cutoff, 'S','R')
+  
+  df$Class.KDE <- dt$Class.KDE[match(df$cell_line,dt$cell_line)]
+
+  return(df)
+  
+  })
+
+dtclass <- do.call(rbind,dtclass)
+
+dt.az.s <- dtclass %>% subset(Class.KDE == 'S')
+dt.az.s$Class.KDE <- factor(dt.az.s$Class.KDE, levels = c('S','R'))
+dt.az.r <- dtclass %>% subset(Class.KDE == 'R')
+dt.az.r$Class.KDE <- factor(dt.az.r$Class.KDE, levels = c('S','R'))
+
+dt.grmax <- newGR50.2 %>% group_by(agent) %>% summarise(efficacy = mean(GRmax)) %>% arrange(.,efficacy)
+
+level.grmax <- dt.grmax$agent
+
+dt.az.s$agent <- factor(dt.az.s$agent, levels = level.grmax)
+dt.az.r$agent <- factor(dt.az.r$agent, levels = level.grmax)
+
+cf.out2 <- cf.out
+
+cf.out2$group <- 'same'
+cf.out2$group <- factor(cf.out2$group, levels = c('same'))
+
+```
+
+
+```{r}
+require(see)
+v <- ggplot() +
+  geom_boxplot(data = dt.az.s,
+              aes(x = agent,
+                  y = SubMedianGR50,
+                  fill = Class.KDE),
+              alpha = 0.2
+              ) +
+  geom_boxplot(data = dt.az.r,
+               aes(x = agent,
+                   y = SubMedianGR50,
+                   fill = Class.KDE),
+               alpha = 0.2
+               ) + 
+  geom_point(data = cf.out,
+               aes(x = Drug,
+                   y = Cutoff),
+               size = 0.5) +
+  geom_line(data = cf.out2,
+            aes(x = Drug,
+                y = Cutoff,
+                group = group),
+            color = 'gray50',
+            linetype = 'dotted') +
+  scale_fill_manual(name = 'Drug\nSensitivity', 
+                    labels = c('Resistant','Sensitive'),
+                    values = c('orange','cyan')) +
+  coord_flip() +
+  theme_bw() +
+  labs(x = '') 
+
+```
+
+Save figure KDE of all drugs
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/KDE')
+ggsave(v, 
+       filename = 'KDEAll.pdf',
+       height = 22,
+       width = 18,
+       units = 'cm',
+       device = cairo_pdf
+)
+```
+
+
+
+Waterfall plots displaying similarity of subgroups by individual drugs vs. CCA subgroups
+```{r}
+require(reshape2)
+
+g4 <- tibble::rownames_to_column(g3, var = 'Cell')
+g4m <- melt(g4, id.vars = 'Cell', variable.name = 'Drug', value.name = 'medGR50')
+
+drugs <- unique(g4m$Drug)
+g4m.new <- lapply(1:length(drugs), function(n) {
+
+  temp <- g4m %>% subset(Drug == drugs[n]) 
+
+  temp$Class <- ifelse(temp$medGR50 < cf.out$Cutoff[cf.out$Drug == drugs[n]], 'S','R')
+
+  return(temp)
+})
+
+g4m <- do.call(rbind,g4m.new)
+
+# for organ status
+g4o <- g4m
+
+```
+
+
+```{r}
+g4m <- newGR50.2 %>% dplyr::select(cell_line,agent,GR50,MedianGR50,SubMedianGR50)
+g4m$Class <- ifelse(g4m$SubMedianGR50 < 0,'S','R')
+
+g5 <- g4o %>% dplyr::select(Cell,Drug,Class)
+
+colnames(g5)[3] <- 'Class.KDE'
+
+drg <- unique(g5$Drug)
+
+g5.1 <- lapply(1:length(drg), function(i) {
+  
+  temp <- g5 %>% subset(Drug == drg[i])
+  
+  ref <- g4m %>% subset(agent == drg[i])
+  
+  temp$Class.MD <- ref$Class[match(temp$Cell,ref$cell_line)]
+  
+  return(temp)
+
+  })
+
+g6 <- do.call(rbind,g5.1)
+g6$Class.KDE <- ifelse(g6$Class.KDE == 'S',0,1)
+g6$Class.MD <- ifelse(g6$Class.MD == 'S',0,1)
+
+require(GoodmanKruskal)
+
+GKreport <- lapply(1:length(drg), function(i) {
+  
+  temp <- g6 %>% subset(Drug == drg[i])
+  
+  tau <- GKtau(temp$Class.KDE,temp$Class.MD)
+  
+  dat <- data.frame('Drug' = drg[i],
+             'GKtau.KDE.MD' = as.numeric(tau$tauxy),
+             'GKtau.MD.KDE' = as.numeric(tau$tauyx)
+             )
+  return(dat)
+
+  })
+
+g7 <- do.call(rbind,GKreport)
+
+require(reshape2)
+
+g7m <- melt(g7,id.vars = 'Drug', variable.name = 'Con', value.name = 'tau')
+g8 <- g7m %>% subset(Con == 'GKtau.KDE.MD')
+```
+
+```{r}
+
+b <- ggplot(g8,
+       aes(x = Con,
+           y = tau)) +
+  geom_boxplot() +
+  geom_jitter(height = 0, width = 0.05) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_blank()
+  ) +
+  labs(y = 'Goodman-Kruskal tau',
+       x = '')
+
+qtl.range <- quantile(g8$tau)
+
+```
+
+Save figure GKtau values from KDE
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/KDE')
+ggsave(b, 
+       filename = 'GKtau_KDE.pdf',
+       height = 8,
+       width = 6,
+       units = 'cm',
+       device = cairo_pdf
+)
+```
+
+
+Calculate accuracy of prediction using individual drugs as a classifier
+```{r}
+# call caret package
+require(caret)
+
+# define CCA subgroups
+refgroup <- data.frame('Cell' = c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138',
+                 'TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28'),
+                 'Sensitivity' = c('S','S','S','S','S','S',
+                   'R','R','R','R','R','R','R','R','R'))
+# add reference group
+g4m$refClass <- refgroup$Sensitivity[match(g4m$Cell,refgroup$Cell)]
+# assign factor level
+g4m$Class <- factor(g4m$Class,levels = c('S','R'))
+g4m$refClass <- factor(g4m$refClass,levels = c('S','R'))
+# analyse 80 drugs
+df.acc <- lapply(1:80, function(n) {
+  # get unique drugs
+  drugs <- unique(g4m$Drug)
+  # subset by drug name
+  temp <- g4m %>% subset(Drug == drugs[n])
+  # calculate balanced accuracy (BA) using caret's confusion matrix
+  # reference = class based on all-drug response
+  # test = class based on kernel density estimates (KED)
+  BA <- confusionMatrix(data = temp$Class, 
+                reference = temp$refClass)$byClass[[11]]
+  # build dataframe output
+  df.out <- data.frame('Drug' = drugs[n],
+                       'BA' = BA)  
+  return(df.out)
+})
+# concatenate the list
+df.acc <- do.call(rbind,df.acc)
+# subset some drugs
+# 27 drugs that emerge from the drug response network
+Drug20 <- c('Bosutinib','TAK733','Azacitidine','Vandetanib','Selumetinib',
+            'Gefitinib','Dasatinib','PD0325901','PD318088','Ribociclib',
+            'Erlotinib','Lapatinib','Saracatinib',
+            'FiveFU','BEZ-235','Etoposide','BAY11-7082','Bleomycin',
+            'Cisplatin','Mitomycin C','LCL161','Gemcitabine','Doxorubicin',
+            'Olaparib','CDK1_2III','Irinotecan','Tanespimycin')
+df.20 <- df.acc %>% subset(Drug %in% Drug20)
+# add CCA drug classes
+df.20$DrugClass <- ifelse(df.20$Drug %in% Drug20[1:13],'CCA1','CCA2') %>% as.factor()
+```
+
+Display FigS4B (similarity of 80 drugs based on KDE)
+```{r}
+# download fonts
+# require(extrafont)
+# extrafont::loadfonts(device = 'win')
+df.20$xcols <- ifelse(df.20$DrugClass == 'CCA1','cyan','orange') %>% as.factor()
+xcols <- df.20 %>% arrange(xcols,desc(BA))
+
+xcols <- as.factor(xcols$xcols)
+
+require(ggpubr)
+FigS4B <- ggplot(df.20,
+       aes(x = reorder(Drug,-BA),
+           y = BA,
+           fill = DrugClass)) +
+  geom_col() +
+  scale_fill_manual(values = c('CCA1' = 'gray80','CCA2' = 'gray80')) +
+  theme_pubr() +
+  theme(
+    text = element_text(family = 'Arial', size = 12),
+    axis.text.x = element_text(family = 'Arial', angle = 90, hjust = 1, vjust = 0.5, 
+                               # color = as.character(xcols)
+                               )
+  ) +
+  labs(x = '',
+       y = 'Accuracy score')
+```
+
+Save figure S4B
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_S4A_files')
+ggsave(FigS4B,
+       filename = 'FigS4B_20191007.png',
+       height = 10,
+       width = 14,
+       units = 'cm',
+       dpi = 600)
+```
+
+Use mutual information to find relatedness between 
+```{r}
+MI <- lapply(1:ncol(g3), function(n) {
+  # define references
+  ref.order <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138',
+                 'TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+  
+  Sensitivity <- c('S','S','S','S','S','S',
+                   'R','R','R','R','R','R','R','R','R')
+  
+  Ranking.ref <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)
+  
+  Ref.table <- data.frame('Cell' = ref.order,
+                          'Sensitivity' = Sensitivity,
+                          'Rank' = Ranking.ref)
+  
+  test.drug <- g3 %>% dplyr::select(n)
+  drug.name <- colnames(test.drug) 
+  test.drug <- tibble::rownames_to_column(test.drug, var = 'Cell')
+  colnames(test.drug) <- c('Cell','Drug')
+  # arrange Cell by GR50 from low to high
+  test.order <- test.drug %>% arrange(Drug)
+  test.order <- tibble::rownames_to_column(test.order, var = 'Rank')
+  # extract rank and rearrange according to Ref.table
+  test.rank <- test.order$Rank[match(Ref.table$Cell,test.order$Cell)] %>% as.numeric()
+  
+  # partition sensitivity from top to bottom
+  # Diag <- diag(x = 1, 15,15)
+  # DiagLogic <- upper.tri(Diag, diag = TRUE) %>% as.data.frame()
+  
+  require(varrank)
+  X1.S <- Ref.table$Rank[1:6]
+  Y1.S <- test.rank[1:6]
+  
+  X1.R <- Ref.table$Rank[7:15]
+  Y1.R <- test.rank[7:15]
+  
+  MI.score.S <- mi.data(X = X1.S, Y = Y1.S, discretization.method = 'doane') 
+  MI.score.R <- mi.data(X = X1.R, Y = Y1.R, discretization.method = 'doane') 
+  
+  X1 <- Ref.table$Rank
+  Y1 <- test.rank
+  
+  MI.score <- mi.data(X = X1, Y = Y1, discretization.method = 'doane')
+  
+  # convert Y1's rank to Cell names
+  Y1.cells <- list(as.character(Ref.table$Cell[match(Y1,Ref.table$Rank)]))
+  
+  MI.table <- data.frame('Drug' = drug.name,
+                         'MI.score.S' = MI.score.S,
+                         'MI.score.R' = MI.score.R,
+                         'MI.score' = MI.score,
+                         'Cell' = I(Y1.cells))
+  
+  return(MI.table)
+})
+
+MyMI.g3 <- do.call(rbind,MI)
+
+# 20 drugs that emerge from the drug response network
+Drug20 <- c('Bosutinib','TAK733','Azacitidine','Vandetanib','Selumetinib',
+            'Gefitinib','Dasatinib','PD0325901','PD318088','Ribociclib',
+            'Erlotinib','Lapatinib','Saracatinib',
+            'FiveFU','BEZ-235','Etoposide','BAY11-7082','Bleomycin',
+            'Cisplatin','Mitomycin C','LCL161','Gemcitabine','Doxorubicin',
+            'Olaparib','CDK1_2III','Irinotecan','Tanespimycin')
+
+MyMI20 <- MyMI %>% subset(Drug %in% Drug20)
+MyMI320 <- MyMI.g3 %>% subset(Drug %in% Drug20)
+# arrange by MI.score 
+# If MI scores are tied, arranged by MI score based on drug sensitive group
+MyMI320 <- MyMI320 %>% group_by(MI.score) %>% arrange(desc(MI.score.S)) %>% ungroup() %>%  arrange(desc(MI.score))
+# from Cell list to table
+test <- do.call(cbind,MyMI320$Cell) %>% as.data.frame()
+colnames(test) <- MyMI320$Drug
+rownames(test) <- ref.order
+test <- tibble::rownames_to_column(test, var = 'CCA')
+
+# convert Cell names to 0,1
+One <- Ref.table$Cell[1:6] %>% as.character()
+Zero <- Ref.table$Cell[7:15] %>% as.character()
+
+OneTable <- lapply(1:ncol(test), function(n) {
+  t <- test[,n]
+  t2 <- ifelse(t %in% One, 0, 1)
+  t3 <- as.data.frame(t2)
+  colnames(t3) <- colnames(test)[n]
+  return(t3)
+})
+
+test2 <- do.call(cbind,OneTable)
+rownames(test2) <- test$CCA
+
+M <- lapply(1:ncol(test2), function(n) {
+  
+  # use confusion matrix
+  require(caret)
+  CI <- confusionMatrix(data = as.factor(test2[,n]), reference = as.factor(test2$CCA))
+  
+  # use ROC AUC
+  require(pROC)
+  ROC <- roc(test2[,n],test2$CCA)
+  
+  # create outputs
+  output <- data.frame('Drug' = colnames(test2)[n],
+                       'CI.accuracy' = CI$byClass[11],
+                       'ROC.AUC' = ROC$auc[[1]])
+  
+  return(output)
+})
+
+M <- do.call(rbind,M)
+# arrange by Accuracy
+M <- M %>% arrange(desc(CI.accuracy))
+# add Mutual Information Score
+M$MI.score <- MyMI320$MI.score[match(M$Drug,MyMI320$Drug)]
+# Replace NA with 10 (arbitary value)
+M$MI.score[which(is.na(M$MI.score))] <- 10
+
+# table of Drug, accuracy, MI score
+M <- M %>% group_by(CI.accuracy) %>% arrange(desc(MI.score)) %>% ungroup() %>% arrange(desc(CI.accuracy))
+
+# require(pROC)
+# # define observation
+# observed.classes <- 
+# # define predictions
+# prediction.probabilities <- 
+# # Compute roc
+# res.roc <- roc(observed.classes, prediction.probabilities)
+# plot.roc(res.roc, print.auc = TRUE)
+
+test2 <- tibble::rownames_to_column(test2, var = 'Cell')
+require(reshape2)
+test3 <- melt(test2,id.vars = 'Cell', variable.name = 'Drug', value.name = 'Class')
+test3$Drug <- factor(test3$Drug, levels = M$Drug)
+test3$Cell <- factor(test3$Cell, levels = rev(test$CCA))
+
+test3$Class <- ifelse(test3$Class == 0, 'S','R')
+
+test3Drugs <- sort(unique(test3$Drug))
+
+drugCols <- ifelse(test3Drugs == 'CCA','black',
+                          ifelse(test3Drugs %in% Drug20[1:13],'cyan','orange'))
+
+drugCols <- factor(drugCols, levels = M$Drug)
+
+FigS4A <- ggplot(test3,
+       aes(x = Drug,
+           y = Cell,
+           fill = Class)) +
+  geom_tile(aes(fill = Class), colour = 'grey50') +
+  scale_fill_manual(values = c('S' = 'white', 'R' = 'black')) +
+  theme(
+    text = element_text(family = 'Arial', size = 12),
+    axis.text.x = element_text(family = 'Arial', angle = 90,hjust = 1,vjust = 0.5,
+                               # color = as.character(drugCols)
+                               ),
+    legend.position = 'none'
+  ) +
+  labs(x = '',
+       y = '')
+```
+
+Save FigS4A
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_S4A_files')
+ggsave(FigS4A,
+       filename = 'FigS4A_20190912.png',
+       height = 10,
+       width = 16,
+       units = 'cm',
+       dpi = 600)
+```
+
+
+New Figure Organ status
+Calculate accuracy of prediction using individual drugs as a classifier
+```{r}
+# call caret package
+require(caret)
+
+# define CCA organ status
+# according to hierarchical clustering (FigS5A)
+# Pancreas(P) = Sensitive(S or 1) , Liver(L) = Resistant(R or 2)
+refgroup <- data.frame('Cell' = c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138',
+                 'TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28'),
+                 'Organ' = c('S','S','S','S','R','R',
+                   'S','S','R','R','S','S','R','R','R'))
+# add reference group
+g4o$refClass <- refgroup$Organ[match(g4o$Cell,refgroup$Cell)]
+# assign factor level
+g4o$Class <- factor(g4o$Class,levels = c('S','R'))
+g4o$refClass <- factor(g4o$refClass,levels = c('S','R'))
+# analyse 80 drugs
+df.acc <- lapply(1:80, function(n) {
+  # get unique drugs
+  drugs <- unique(g4o$Drug)
+  # subset by drug name
+  temp <- g4o %>% subset(Drug == drugs[n])
+  # calculate balanced accuracy (BA) using caret's confusion matrix
+  # reference = class based on all-drug response
+  # test = class based on kernel density estimates (KED)
+  BA <- confusionMatrix(data = temp$Class, 
+                reference = temp$refClass)$byClass[[11]]
+  # build dataframe output
+  df.out <- data.frame('Drug' = drugs[n],
+                       'BA' = BA)  
+  return(df.out)
+})
+# concatenate the list
+df.acc <- do.call(rbind,df.acc)
+# subset some drugs
+# 27 drugs that emerge from the drug response network
+Drug20 <- c('Bosutinib','TAK733','Azacitidine','Vandetanib','Selumetinib',
+            'Gefitinib','Dasatinib','PD0325901','PD318088','Ribociclib',
+            'Erlotinib','Lapatinib','Saracatinib',
+            'FiveFU','BEZ-235','Etoposide','BAY11-7082','Bleomycin',
+            'Cisplatin','Mitomycin C','LCL161','Gemcitabine','Doxorubicin',
+            'Olaparib','CDK1_2III','Irinotecan','Tanespimycin')
+df.20 <- df.acc #%>% subset(Drug %in% Drug20)
+# add CCA drug classes
+df.20$DrugClass <- ifelse(df.20$Drug %in% Drug20[1:13],'CCA1','CCA2') %>% as.factor()
+```
+
+Display Fig Organ status (similarity of 80 drugs based on KDE)
+```{r}
+# download fonts
+# require(extrafont)
+# extrafont::loadfonts(device = 'win')
+df.20$xcols <- ifelse(df.20$DrugClass == 'CCA1','cyan','orange') %>% as.factor()
+xcols <- df.20 %>% arrange(xcols,desc(BA))
+
+xcols <- as.factor(xcols$xcols)
+
+require(ggpubr)
+FigS4Borg <- ggplot(df.20,
+       aes(x = reorder(Drug,-BA),
+           y = BA,
+           fill = DrugClass)) +
+  geom_col() +
+  scale_fill_manual(values = c('CCA1' = 'gray80','CCA2' = 'gray80')) +
+  theme_pubr() +
+  theme(
+    text = element_text(family = 'Arial', size = 12),
+    axis.text.x = element_text(family = 'Arial', angle = 90, hjust = 1, vjust = 0.5, 
+                               # color = as.character(xcols)
+                               )
+  ) +
+  ylim(0,1) +
+  labs(x = '',
+       y = 'Accuracy score')
+```
+
+Save figure S4Borg
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_S4A_files')
+ggsave(FigS4Borg,
+       filename = 'FigS4Borg_20191111.png',
+       height = 10,
+       width = 14,
+       units = 'cm',
+       dpi = 600)
+```
+
+
+Use mutual information to find relatedness between 
+```{r}
+MI <- lapply(1:ncol(g3), function(n) {
+  # define references
+  ref.order <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','TFK-1','YSCCC','HuCCT-1','KKK-D131',
+                 'RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28')
+  
+  Sensitivity <- c('S','S','S','S','S','S','S','S',
+                   'R','R','R','R','R','R','R')
+  
+  Ranking.ref <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)
+  
+  Ref.table <- data.frame('Cell' = ref.order,
+                          'Sensitivity' = Sensitivity,
+                          'Rank' = Ranking.ref)
+  
+  test.drug <- g3 %>% dplyr::select(n)
+  drug.name <- colnames(test.drug) 
+  test.drug <- tibble::rownames_to_column(test.drug, var = 'Cell')
+  colnames(test.drug) <- c('Cell','Drug')
+  # arrange Cell by GR50 from low to high
+  test.order <- test.drug %>% arrange(Drug)
+  test.order <- tibble::rownames_to_column(test.order, var = 'Rank')
+  # extract rank and rearrange according to Ref.table
+  test.rank <- test.order$Rank[match(Ref.table$Cell,test.order$Cell)] %>% as.numeric()
+  
+  # partition sensitivity from top to bottom
+  # Diag <- diag(x = 1, 15,15)
+  # DiagLogic <- upper.tri(Diag, diag = TRUE) %>% as.data.frame()
+  
+  require(varrank)
+  X1.S <- Ref.table$Rank[1:8]
+  Y1.S <- test.rank[1:8]
+  
+  X1.R <- Ref.table$Rank[9:15]
+  Y1.R <- test.rank[9:15]
+  
+  MI.score.S <- mi.data(X = X1.S, Y = Y1.S, discretization.method = 'doane') 
+  MI.score.R <- mi.data(X = X1.R, Y = Y1.R, discretization.method = 'doane') 
+  
+  X1 <- Ref.table$Rank
+  Y1 <- test.rank
+  
+  MI.score <- mi.data(X = X1, Y = Y1, discretization.method = 'doane')
+  
+  # convert Y1's rank to Cell names
+  Y1.cells <- list(as.character(Ref.table$Cell[match(Y1,Ref.table$Rank)]))
+  
+  MI.table <- data.frame('Drug' = drug.name,
+                         'MI.score.S' = MI.score.S,
+                         'MI.score.R' = MI.score.R,
+                         'MI.score' = MI.score,
+                         'Cell' = I(Y1.cells))
+  
+  return(MI.table)
+})
+
+MyMI.g3 <- do.call(rbind,MI)
+
+# 20 drugs that emerge from the drug response network
+Drug20 <- c('Bosutinib','TAK733','Azacitidine','Vandetanib','Selumetinib',
+            'Gefitinib','Dasatinib','PD0325901','PD318088','Ribociclib',
+            'Erlotinib','Lapatinib','Saracatinib',
+            'FiveFU','BEZ-235','Etoposide','BAY11-7082','Bleomycin',
+            'Cisplatin','Mitomycin C','LCL161','Gemcitabine','Doxorubicin',
+            'Olaparib','CDK1_2III','Irinotecan','Tanespimycin')
+
+MyMI20 <- MyMI #%>% subset(Drug %in% Drug20)
+MyMI320 <- MyMI.g3 #%>% subset(Drug %in% Drug20)
+# arrange by MI.score 
+# If MI scores are tied, arranged by MI score based on drug sensitive group
+MyMI320 <- MyMI320 %>% group_by(MI.score) %>% arrange(desc(MI.score.S)) %>% ungroup() %>%  arrange(desc(MI.score))
+# from Cell list to table
+test <- do.call(cbind,MyMI320$Cell) %>% as.data.frame()
+colnames(test) <- MyMI320$Drug
+rownames(test) <- ref.order
+test <- tibble::rownames_to_column(test, var = 'CCA')
+
+# convert Cell names to 0,1 (Sensitive,Resistant)
+Zero <- Ref.table$Cell[1:8] %>% as.character()
+One <- Ref.table$Cell[9:15] %>% as.character()
+
+OneTable <- lapply(1:ncol(test), function(n) {
+  t <- test[,n]
+  t2 <- ifelse(t %in% Zero, 0, 1)
+  t3 <- as.data.frame(t2)
+  colnames(t3) <- colnames(test)[n]
+  return(t3)
+})
+
+test2 <- do.call(cbind,OneTable)
+rownames(test2) <- test$CCA
+
+M <- lapply(1:ncol(test2), function(n) {
+  
+  # use confusion matrix
+  require(caret)
+  CI <- confusionMatrix(data = as.factor(test2[,n]), reference = as.factor(test2$CCA))
+  
+  # use ROC AUC
+  require(pROC)
+  ROC <- roc(test2[,n],test2$CCA)
+  
+  # create outputs
+  output <- data.frame('Drug' = colnames(test2)[n],
+                       'CI.accuracy' = CI$byClass[11],
+                       'ROC.AUC' = ROC$auc[[1]])
+  
+  return(output)
+})
+
+M <- do.call(rbind,M)
+# arrange by Accuracy
+M <- M %>% arrange(desc(CI.accuracy))
+# add Mutual Information Score
+M$MI.score <- MyMI320$MI.score[match(M$Drug,MyMI320$Drug)]
+# Replace NA with 10 (arbitary value)
+M$MI.score[which(is.na(M$MI.score))] <- 10
+
+# table of Drug, accuracy, MI score
+M <- M %>% group_by(CI.accuracy) %>% arrange(desc(MI.score)) %>% ungroup() %>% arrange(desc(CI.accuracy))
+
+# require(pROC)
+# # define observation
+# observed.classes <- 
+# # define predictions
+# prediction.probabilities <- 
+# # Compute roc
+# res.roc <- roc(observed.classes, prediction.probabilities)
+# plot.roc(res.roc, print.auc = TRUE)
+
+test2 <- tibble::rownames_to_column(test2, var = 'Cell')
+require(reshape2)
+test3 <- melt(test2,id.vars = 'Cell', variable.name = 'Drug', value.name = 'Class')
+test3$Drug <- factor(test3$Drug, levels = M$Drug)
+test3$Cell <- factor(test3$Cell, levels = rev(test$CCA))
+# 0 is sensitive = white, 1 is resistant = black
+test3$Class <- ifelse(test3$Class == 0, 'S','R')
+
+test3Drugs <- sort(unique(test3$Drug))
+# 
+# drugCols <- ifelse(test3Drugs == 'CCA','black',
+#                           ifelse(test3Drugs %in% Drug20[1:13],'cyan','orange'))
+
+# drugCols <- factor(drugCols, levels = M$Drug)
+
+FigS4Aorg <- ggplot(test3,
+       aes(x = Drug,
+           y = Cell,
+           fill = Class)) +
+  geom_tile(aes(fill = Class), colour = 'grey50') +
+  scale_fill_manual(values = c('S' = 'white', 'R' = 'black')) +
+  theme(
+    text = element_text(family = 'Arial', size = 12),
+    axis.text.x = element_text(family = 'Arial', angle = 90,hjust = 1,vjust = 0.5,
+                               # color = as.character(drugCols)
+                               ),
+    legend.position = 'none'
+  ) +
+  labs(x = '',
+       y = '')
+```
+
+Save FigS4Aorg
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_S4A_files')
+ggsave(FigS4Aorg,
+       filename = 'FigS4Aorg_20191111.png',
+       height = 10,
+       width = 16,
+       units = 'cm',
+       dpi = 600)
+```
+
+
+Correlation between rank-order using KDE and BA
+```{r}
+order.MI <- M %>% subset(Drug != 'CCA') %>% arrange(desc(CI.accuracy)) %>% dplyr::select(Drug,CI.accuracy)
+order.KDE <- df.20 %>% arrange(desc(BA)) %>% dplyr::select(Drug,BA)
+
+colnames(order.MI) <- c('Drug','Score')
+colnames(order.KDE) <- c('Drug','Score')
+
+order.MI$Method <- 'MI'
+order.KDE$Method <- 'KDE'
+
+df.order <- rbind(order.MI, order.KDE)
+
+require(reshape2)
+df.order <- dcast(df.order,formula = Drug ~ Method,value.var = 'Score')
+# add drug class
+df.order$DrugClass <- ifelse(df.order$Drug %in% Drug20[1:13],'cyan','orange')
+df.order$DrugClass <- factor(df.order$DrugClass, levels = c('cyan','orange'))
+  
+require(ggpubr)
+require(ggplot2)
+require(ggrepel)
+
+FigS4Corg <- ggscatter(data = df.order,
+                    x = 'KDE',
+                    y = 'MI',
+                    add = 'reg.line',
+                    conf.int = FALSE) +
+  # stat_summary(fun.data = mean_cl_normal) + 
+  # geom_smooth(method = 'lm',formula = y ~ x) +
+  stat_cor(
+    method = "pearson",
+    aes(label = paste(..r.label.., ..p.label.., sep = "~`,`~")),
+    label.x = 0.2, label.y = 1.0
+  ) +
+  geom_point(data = df.order,
+             aes(x = KDE,
+                 y = MI,
+                 # color = DrugClass
+                 )) +
+  # scale_color_manual(values = c('cyan' = 'cyan', 'orange' = 'orange')) +
+  theme(
+    text = element_text(family = 'Arial', size = 12),
+    legend.position = 'bottom'
+  ) +
+  geom_text_repel(data = df.order,
+            aes(x = KDE,
+                y = MI,
+                label = Drug),
+            segment.color = 'gray80',inherit.aes = FALSE,
+            size = 2.5)
+
+
+```
+
+Save FigS4Corg
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_4A_S4A_files')
+ggsave(FigS4C,
+       filename = 'FigS4Corg_20191111.png',
+       height = 10,
+       width = 10,
+       units = 'cm',
+       dpi = 600)
+```
+
+
+
+############################
+
+To prepare data input for GSEA of individual drug, 
+we would calculte fold difference of mean TPM in drug sensitive cells over drug resistant cells.
+```{r}
+# select some columns from df.mat5
+df.TPM <- df.mat5 %>% select_(.dots = c('Gene','Cell','TPM.m'))
+# create a list of drugs found in drugSens
+drugList <- unique(drugSens$Drug)
+# subset data using drug name to get sensitivy values
+
+p <- lapply(1:length(drugList), function(i){
+  # use groups identified by Mclust method
+  # subset data by individual drug
+  temp <- drugSens %>% subset(Drug %in% drugList[i])
+  # extract drug sensitivity
+  Drug.Subgroup <- temp$DrugSensitivity.kde
+  # convert to numerical data
+  Drug.Subgroup <- ifelse(Drug.Subgroup == 'Sensitive', 1, 2)
+  # add cell names
+  names(Drug.Subgroup) <- temp$Cell
+  # add drug sensitivity group to expression table by matching cell names
+  df.TPM$Drug.Subgroup <- Drug.Subgroup[match(df.TPM$Cell,names(Drug.Subgroup))]
+  # extract gene expression based on drug subgroup 1
+  x <- df.TPM %>% subset(Drug.Subgroup == 1) %>% summarize(TPM.m = median(TPM.m))
+  # extract gene expression based on drug subgroup 2
+  y <- df.TPM %>% subset(Drug.Subgroup == 2) %>% summarize(TPM.m = median(TPM.m))
+  # because TPM.m is log2(TPM), we used subtraction of TPM.m from drug subgroup 1 - drug subgroup 2 
+  # to get a fold difference 
+  df.Drug <- x$TPM.m - y$TPM.m %>% as.data.frame()
+  # add gene names to data table
+  df.Drug <- tibble::add_column(df.Drug,x$Gene,.before = 0) %>% `colnames<-`(c('Gene','fc.TPM'))
+  # create column for drug name annotation
+  Drug <- rep(paste0(drugList[i],'_S.R'),nrow(df.Drug))
+  # add drug name column
+  df.Drug <- tibble::add_column(df.Drug,Drug,.after = 2)
+  
+  return(df.Drug)
+})
+df.Drug <- do.call(rbind,p)
+
+df.Drug <- reshape2::dcast(df.Drug, Gene ~ Drug, value.var = 'fc.TPM')
+
+```
+
+
+Now, we will prepare data table for GSEA analysis.
+```{r}
+# We will add these drug response columns to to original data frame
+# median expression level of subtype 1 over subtype 2
+df.subtypes <- df.mat5 %>% group_by(Gene,Cell.subgroup) %>% summarize(TPM.m = median(TPM.m))
+# extract gene expression from CCA Subgroup 1
+x <- df.subtypes %>% subset(Cell.subgroup == 1) %>% summarize(TPM.m = median(TPM.m))
+# extract gene expression from CCA Subgroup 2
+y <- df.subtypes %>% subset(Cell.subgroup == 2) %>% summarize(TPM.m = median(TPM.m))
+# Create a dataframe of Subgroup1 / Subgroup2 showing TPM
+df.CCA.Subtype <- x$TPM.m - y$TPM.m %>% as.data.frame()
+df.CCA.Subtype <- tibble::add_column(df.CCA.Subtype,x$Gene,.before = 0) %>% `colnames<-`(c('Gene','Subtype_1.2'))
+# reshape df.mat5
+df.Cell <- dcast(df.mat5, Gene ~ Cell, value.var = 'TPM.m')
+# merge 2 dataframe
+df.all <- merge(df.CCA.Subtype,df.Cell, by = 'Gene')
+# merge drugSR and df.all
+df.new3 <- merge(df.all, df.Drug, by = 'Gene')
+
+
+# add Organ subtypes
+# S or 1 = Pancreas, R or 2 = Liver
+df.orgsub <- df.mat5 %>% group_by(Gene,Org.subgroup) %>% summarise(TPM.m = median(TPM.m))
+a <- df.orgsub %>% subset(Org.subgroup == 1) %>% summarise(TPM.m = median(TPM.m))
+b <- df.orgsub %>% subset(Org.subgroup == 2) %>% summarise(TPM.m = median(TPM.m))
+df.Org.Subtype <- a$TPM.m - b$TPM.m %>% as.data.frame()
+df.Org.Subtype <- tibble::add_column(df.Org.Subtype,a$Gene,.before = 0) %>% `colnames<-`(c('Gene','OrgSubtype_1.2'))
+OrgSubtype_1.2 <- df.Org.Subtype$OrgSubtype_1.2[match(df.new3$Gene,df.Org.Subtype$Gene)]
+
+df.new31 <- tibble::add_column(df.new3, OrgSubtype_1.2, .after = 2)
+
+
+# df.new3 display fold-change of gene expression comparing between subgroup 1/2 (Subtype_1.2), cell/subgroup2 (individual cell), and drug sensitive/resistant (drug_S.R).
+```
+
+Save data table.
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_2')
+write.csv(df.new31,'Expression_level_ALL_20191111.csv',row.names = FALSE, quote = FALSE)
+```
+
+Next step, we convert gene names to ENTREZ id for gene annotation. This function require 'clusterProfiler' R package.
+```{r}
+# we already have dataframe containing fold-change value compared to median of gene group
+# Next, we'll find hallmarks based on these values
+# recall function for geneID mapping
+# add ENTREZID column
+addENTREZID <- function(dat) {
+  List.col2 <- colnames(dat)
+  loc.symbol <- which(List.col2 == 'Gene')
+  # use clusterProfiler package functions
+  md <- clusterProfiler::bitr(dat[,loc.symbol], fromType = 'SYMBOL', toType = c('ENTREZID'), OrgDb = 'org.Hs.eg.db')
+  # now get values from all CCA 
+  ls.genes <- md$SYMBOL
+  df.sel <- dat %>% subset(Gene %in% md$SYMBOL)
+  # convert SYMBOL to ENTREZID
+  mc <- clusterProfiler::bitr(df.sel$Gene, fromType = 'SYMBOL', toType = 'ENTREZID', OrgDb = 'org.Hs.eg.db')
+  # remove duplicated SYMBOLS
+  mc.uq <- mc[!duplicated(mc$SYMBOL),]
+  # add ENTREZID to data frame behind gene.name column
+  # df.out <- as.data.frame(append(df.sel,data.frame('ENTREZID' = mc.uq$ENTREZID) , after = loc.symbol))
+  loc.gene.name <- which(colnames(df.sel) == 'Gene')
+  df.out <- cbind(df.sel[,c(which(colnames(df.sel) == 'Gene'))],
+        data.frame('ENTREZID' = mc.uq$ENTREZID),
+        df.sel[,-c(which(colnames(df.sel) == 'Gene'))])
+  # chang 'Gene.name' to 'SYMBOL'
+  colnames(df.out)[1] <- 'SYMBOL'
+  return(df.out)
+}
+```
+
+```{r}
+# generate dataframe with GENE SYMBOLs, ENTREZIDs and fold-change of gene expression level.
+df.B <- addENTREZID(df.new31)
+# This format is compatible with Broad Institute's GSEA
+colnames(df.B)[c(1,2)] <- c('NAME','DESCRIPTION')
+```
+
+```{r}
+# save file
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq')
+# write.table(df.B, file = 'GSEA_Matrix_for_Broad_13102018.txt', row.names = FALSE, quote = FALSE, sep = '\t')
+# write.csv(df.B,'GSEA_Matrix_for_Broad_13102018.csv',row.names = FALSE, quote = FALSE)
+#df.B <- read.csv('GSEA_Matrix_for_Broad_13102018.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Newest updated MSigDB was on 13 October 2018. Downloaded MSigDBv6_2.zip
+```{r}
+# We need to crate databases for GSEA
+# Here, we will MSigDB for gene sets
+library(GSEABase)
+# define path folder
+db.path <- 'C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq'
+db.folder <- 'msigdb_v6.2_files_local/msigdb_v6.2_GMTs'
+db.list <- list.files(file.path(db.path,db.folder), pattern = '\\.entrez.gmt$')
+
+gmtfile.hm <- file.path(db.path,db.folder,db.list[20])
+db1 <- clusterProfiler::read.gmt(gmtfile.hm) # 20 = Hallmarks data set
+
+gmtfile.bp <- file.path(db.path,db.folder,db.list[15])
+db2 <- clusterProfiler::read.gmt(gmtfile.bp)# 15 = Biological processes data set
+
+gmtfile.kg <- file.path(db.path,db.folder,db.list[5])
+db3 <- clusterProfiler::read.gmt(gmtfile.kg) # 5 = KEGG pathways data set
+
+gmtfile.cp <- file.path(db.path,db.folder,db.list[7])
+db4 <- clusterProfiler::read.gmt(gmtfile.cp) # 7 = Cellular processes data set
+
+gmtfile.os <- file.path(db.path,db.folder,db.list[18])
+db5 <- clusterProfiler::read.gmt(gmtfile.os) # 18 = Oncogenic pathways data set
+
+# db.list
+```
+
+Perform GSEA using 'DOSE' R package and dependencies ('tm','clusterProfiler',)
+```{r}
+# We will perform GSEA using functions in DOSE package
+# First, we will create a custom function that will extract a table report similar to one in Broad Institute's GSEA
+myenrich <- function(df,col.ENTREZID,col.cell,p.cutoff,db,f.switch){
+  # df <- df.C
+  List.col <- colnames(df)
+  # col.cell <- Param3
+  num.cell <- length(col.cell)
+  # col.ENTREZID <- 2
+  # p.cutoff <- 1
+  # db <- db1
+  # f.switch <- 0
+  List.gseKEGG <- lapply(1:num.cell, function(i) {
+    # i <-1
+    # https://github.com/GuangchuangYu/DOSE/wiki/how-to-prepare-your-own-geneList
+    df.cell <- df %>% select_(.dots = c(col.ENTREZID,col.cell[i]))
+    v <- df.cell[,2]
+    v[!is.finite(v)] <- 0 # non-finite values = 0
+    names(v) <- df.cell[,1] # use ENTREZID as rownames
+    vin <- sort(v, decreasing = TRUE) # sort based on value
+    # require library('DOSE','clusterProfiler')
+    set.seed(1)
+    kk2 <- clusterProfiler::GSEA(vin, 
+                exponent = 1, 
+                nPerm = 1000, 
+                minGSSize = 10, 
+                maxGSSize = 500, 
+                pvalueCutoff = p.cutoff, 
+                pAdjustMethod = 'BH', 
+                TERM2GENE = db,
+                TERM2NAME = NA, 
+                verbose = FALSE,
+                seed = FALSE)
+
+    kk2 <- DOSE::setReadable(kk2, OrgDb = org.Hs.eg.db, keytype = 'ENTREZID') # convert ENTREZID to SYMBOL, require clusterprofiler package
+    cell.gseKEGG <- kk2@result # extract table result from class kk2
+    if (f.switch == 1){
+      Sig.cell.gseKEGG <- cell.gseKEGG %>% filter(grepl('.*signaling pathway',Description)) # filter rows with term 'signaling pathway'
+      # require library(tm) # NLP package
+      mi <- Sig.cell.gseKEGG$Description
+      mt <- tm::removeWords(as.character(mi),'signaling pathway')
+      mc <- rep(List.col[col.cell[i]], length(mi))
+      loc.add <- which(colnames(Sig.cell.gseKEGG) == 'Description')
+      Sig.cell.gseKEGG <- as.data.frame(append(Sig.cell.gseKEGG, data.frame('ShortDescription' = mt,
+                                                                            'Cell' = mc), after = loc.add))
+    } else {
+      Sig.cell.gseKEGG <- cell.gseKEGG
+      mi <- Sig.cell.gseKEGG$Description
+      mc <- rep(List.col[col.cell[i]], length(mi))
+      loc.add <- which(colnames(Sig.cell.gseKEGG) == 'Description')
+      Sig.cell.gseKEGG <- as.data.frame(append(Sig.cell.gseKEGG, data.frame('Cell' = mc), after = loc.add))
+    }
+    outputs <- list('table' = Sig.cell.gseKEGG,
+                    'gseKEGG' = kk2)
+    return(outputs)
+  })
+  Table.gseKEGG <- do.call(rbind,lapply(1:length(List.gseKEGG), function(x) List.gseKEGG[[x]]$table))
+  gsea.output <- lapply(1:length(List.gseKEGG), function(x) List.gseKEGG[[x]]$gseKEGG)
+  finals <- list('table' = Table.gseKEGG,
+                 'gsea' = gsea.output)
+  return(finals)
+}
+```
+
+We define inputs for GSEA.
+```{r}
+# We are focusing on GSEA using Hallmarks data set
+# define input data frame
+# exlude NAME(Symbol) and DESCRIPTION(ENTREZID) columns
+temp <- df.B[,-c(1,2)]
+# remove column where all row = 0 by first indexing drug columns with low variance
+unCol <- colnames(temp)[which(colSums(temp) == 0)]
+# remove the drug columns with 0 values
+df.C <- df.B[ , !(names(df.B) %in% unCol)]
+
+# define input variables for GSEA
+Param1 <- df.C
+# define ENTREZID column number
+Param2 <- 2
+# define Cell column numbers
+Param3 <- 3:ncol(Param1)
+# define p-value cutoff
+Param4 <- 1
+# define data set used in this analysis
+Param5 <- db1
+```
+
+Run GSEA using customized function and defined parameters.
+```{r}
+# We will find significant hallmarks
+# Set initial p-value cutoff = 0.05
+HM <- myenrich(Param1,
+               col.ENTREZID = Param2,
+               col.cell = Param3,
+               p.cutoff = Param4,
+               db = Param5,
+               f.switch = 0)
+HT <- HM$table
+
+head(HT)
+```
+
+Save data.
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_2')
+write.csv(HT,'Hallmarks_Matrix_20191111.csv',row.names = FALSE, quote = FALSE)
+# HT2 <- read.csv('Hallmarks_Matrix_31012019.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Data visualization
+Volcano plot displaying enriched pathways only found in Subtype_1.2
+```{r}
+v.sub <- HT %>% select_(.dots = c('Cell','NES','ID','p.adjust','pvalue')) %>% subset(Cell %in% c('OrgSubtype_1.2'))
+
+v.sub$Significant <- ifelse(v.sub$p.adjust < 0.05, 'p.adjust < 0.05', 'Not Sig')
+
+# remove 'HALLMARK' strings
+word_wrap <- function(str_input){
+  # str_input <- v.sub$ID[2]
+  mystr <- str_input %>% as.character() %>% gsub('HALLMARK_','',.)
+}
+v.sub <- v.sub %>% mutate(ID.wrap = word_wrap(ID))
+
+v.sub1 <- v.sub %>% subset(p.adjust < 0.05) 
+v.sub1$NES.status <- ifelse(v.sub1$NES > 0, 'pos','neg') 
+v.sub2 <- v.sub %>% subset(p.adjust > 0.05)
+  
+  
+require(ggrepel)
+volplot <- ggplot() +
+  geom_point(data = v.sub1, 
+             aes(x = NES, 
+                 y = -log(p.adjust),
+                 fill = NES.status, alpha = 0.5),
+             color = 'black',
+             size = 3,
+             pch = 21,
+             position = position_jitterdodge(jitter.height = 0.05, jitter.width = 0.05)) +
+  geom_text_repel(data = v.sub1,
+                  aes(x = NES,
+                      y = -log(p.adjust),
+                      label = ID),
+                  size = 2,
+                  box.padding = 0.5,
+                  point.padding = 0.5,
+                  segment.alpha = 0.5,
+                  segment.color = 'gray',
+                  force = 3) +
+  guides(fill = FALSE) +  #guide_legend(override.aes = list(size = 5))) +
+  scale_fill_manual(values = c('pos' = 'red', 'neg' = 'blue')) +
+  geom_point(data = v.sub2,
+             aes(x = NES,
+                 y = -log(p.adjust)),
+             color = 'gray') +
+  theme_minimal() + 
+  theme(
+    text = element_text(family = 'Arial'),
+    legend.position = 'none',
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    title = element_text(size = 14),
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_text(size = 8)
+  ) +
+  xlim(-3,3) + 
+  ylim(0,5) +
+  labs(title = 'Enriched cancer \nhallmark gene sets',
+       y = expression(-log~'(adjusted p-value)'))
+
+# extrafont::loadfonts(device = 'win')
+volplot
+```
+
+Save volcano plot for Figure 4Aorg
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_1')
+library(grid)
+library(gridExtra)
+ggsave(grid.draw(volplot),
+       file = 'Hallmarks_VolcanoPlot_PancVsLiver_20191111.png',
+       h = 15,
+       w = 15,
+       units = 'cm',
+       dpi = 300)
+dev.off()
+```
