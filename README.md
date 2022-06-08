@@ -3,7 +3,7 @@ This is repositories for storing codes for our cholangiocarcinoma project on a t
 
 General Procedure for running codes
 
-1) Download all necessary files from our github repository to the desired folder
+1) Download all necessary files from our github repository to your desired folder
 
 2) Add the downloaded folder to R path 
 
