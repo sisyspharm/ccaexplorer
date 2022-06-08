@@ -1,0 +1,655 @@
+---
+title: "Module 2"
+author: "Patipark Kueanjinda"
+date: "Updated on June 11, 2020"
+output: html_notebook
+---
+
+Module 2 is used to:
+1. Identify novel drug response biomarkers for CCA1 and CCA2 subtypes.
+2. Compare prediction accuracy of different classifier models (RF, GLM, ADA).
+3. generate Table S3
+
+```{r}
+# call packages
+require(tidyverse)
+require(tibble)
+require(reshape2)
+require(randomForest)
+require(caret)
+```
+
+Download data table.
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA/module1_results/Tables')
+
+HT2 <- read.csv('Hallmarks_Matrix_20200611.csv', header = FALSE, stringsAsFactors = FALSE)
+colnames(HT2) <- HT2[1,]
+colnames(HT2)[c(11,12,13,14)] <- c('leading_edge','','','core_enrichment')
+HT2 <- HT2[-(1),] %>% `row.names<-`(., NULL)
+
+# download fold-change expression levels of genes
+df.explevel <- read.csv('Expression_level_ALL_20200611.csv', header = FALSE, stringsAsFactors = FALSE)
+colnames(df.explevel) <- df.explevel[1,]
+df.explevel <- df.explevel[-(1),] %>% `row.names<-`(., NULL)
+
+# download drug response
+df.DR <- read.csv('Table_DrugSensitivityClass_20200612.csv', header = FALSE, stringsAsFactors = FALSE)
+colnames(df.DR) <- df.DR[1,]
+df.DR <- df.DR[-(1),] %>% `row.names<-`(., NULL)
+```
+
+```{r}
+setwd('C:/Users/patipark/Dropbox/CCA/module1_data')
+nodeSize <- read.csv('SizeofNodeinCCASubtype.csv', header = FALSE, stringsAsFactors = FALSE)
+colnames(nodeSize) <- c('Drug','Subtype1','Subtype2')
+nodeSize <- nodeSize[-(1),] %>% `row.names<-`(., NULL)
+```
+
+Gene selection procedures
+1. Retrieve leading-edge genes from significant gene sets
+2. Match genes from the gene sets and actual genes in gene expression list
+
+```{r}
+# change cell names
+# cell lines were arranged in order as shown in Figure 3A
+from <- c('KKU.213','KKU.214','KKU.156','HuCCA.1','RBE','KKK.D138','TFK.1','YSCCC','SSP.25','KKU.100','HuCCT.1','KKK.D131','KKU.055','KKK.D068','HuH.28')
+
+to <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138','TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+
+# build a list of cell lines
+map <- setNames(to,from)
+
+# reshape gene expression level table
+b.out <- reshape2::melt(df.explevel, id.vars = 'Gene', variable.name = 'Cell', value.name = 'fc.Expr')
+# changer fc.Expr to numeric
+b.out$fc.Expr <- as.numeric(b.out$fc.Expr)
+
+```
+
+Now, we wanted to extract gene classifiers.
+```{r}
+# allow parallel 
+require(parallel)
+require(doParallel)
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+```
+
+```{r}
+# k = index number of Cell
+# DrugInit = list of Cell
+# df.input = hallmark gene set table
+# df.DR2mod = metadata table
+# b.out = gene expression level table
+
+DrugInit <- unique(HT2$Cell)
+df.input <- HT2
+df.DR2mod <- df.DR
+df.exp <- b.out %>% subset(Cell %in% to)
+```
+
+```{r}
+# we wrote a function below:
+CVV <- function (k,DrugInit,df.input,df.DR2mod,b.out) {
+  # k <- 81 # example
+  # obtain drug name
+  drug.name <- ifelse(DrugInit[k] %in% c('Subtype_1.2','Organ_1.2'), DrugInit[k], DrugInit[k]) %>% trimws(., which = 'both')
+  # modify drug names, removing suffix '_S.R'
+  dnn <- gsub('_S.R','',drug.name) %>% trimws(., which = 'both')
+  # modify drug names in df.input
+  df.HT <- df.input %>% subset(Cell %in% drug.name)
+  
+  # df.input contains 50 gene sets
+  # subset data frame by drug (Cell column)
+  df.pos <- df.HT %>% subset(Cell %in% drug.name & NES > 0)
+  df.neg <- df.HT %>% subset(Cell %in% drug.name & NES <= 0)
+  
+  # From Positive NES, create a table consists of Genes, Hallmarks,NES
+  # gene sets are listed by rows
+  cp <- lapply(1:nrow(df.pos), function(a) {
+    # extract gene in core_enrichment column by row
+    gnls <- df.pos$core_enrichment[a]
+    # separate gene by string '/'
+    n <- strsplit(gnls, '/') # results from strsplit are lists
+    dfn <- do.call(cbind,n) # bind lists to a vector
+    # create a table of genes extracted from the gene set with annotations
+    # :hallmarks, category, cat.color code, NES status (1,2), NES value, comparison type (Cell)
+    dfh <- data.frame('Gene' = as.character(dfn),
+                      'Hallmark' = as.character(rep(df.pos$ID[a],length(dfn))),
+                      'NES' = as.numeric(rep(df.pos$NES[a], length(dfn))),
+                      'p.adjust' = as.numeric(rep(df.pos$p.adjust[a], length(dfn))),
+                      'qvalues' = as.numeric(rep(df.pos$qvalues[a], length(dfn))),
+                      'NES.status' = as.character(rep('positive',length(dfn))),
+                      'NES.value' = as.numeric(rep(1,length(dfn))),
+                      'Cell' = as.character(rep(dnn,length(dfn))))
+  })
+  # bind table of all genes with their annotations
+  dfp <- do.call(rbind,cp)
+  
+  # Frome Negative NES, construct a matrix containing Genes, Hallmarks,NES
+  cn <- lapply(1:nrow(df.neg), function(b) {
+    # extract gene in core_enrichment column by row
+    gnls <- df.neg$core_enrichment[b]
+    # separate gene by string '/'
+    n <- strsplit(gnls, '/') # results from strsplit are lists
+    dfn <- do.call(cbind,n) # bind lists to a vector
+    # create a table of genes extracted from the gene set with annotations
+    # :hallmarks, category, cat.color code, NES status (1,2), NES value, comparison type (Cell)
+    dfh <- data.frame('Gene' = as.character(dfn),
+                      'Hallmark' = as.character(rep(df.neg$ID[b],length(dfn))),
+                      'NES' = as.numeric(rep(df.neg$NES[b], length(dfn))),
+                      'p.adjust' = as.numeric(rep(df.neg$p.adjust[b], length(dfn))),
+                      'qvalues' = as.numeric(rep(df.neg$qvalues[b], length(dfn))),
+                      'NES.status' = as.character(rep('negative',length(dfn))),
+                      'NES.value' = as.numeric(rep(2,length(dfn))),
+                      'Cell' = as.character(rep(dnn,length(dfn))))
+  }) 
+  # bind table of all genes with their annotations
+  dfn <- do.call(rbind,cn)
+  
+  # genes selected for further analysis must pass the following criteria:
+  # FDR-adjust p-value (p.adjust) < 0.05 to avoid false positive genes
+  # Benjamini-Hochberg is more strict to p.adjust
+  # moderately strong evidence and null hypothesis does not hold
+  dfgene <- rbind(dfp,dfn) %>% subset(p.adjust < 0.05)
+  
+  # in some cases, no cancer hallmarks was significantly enriched,
+  # thus, the p.adjust was set to less stringency
+  if(nrow(dfgene) != 0){
+    dfgene <- dfgene
+  } else {
+    # p-value < 0.1 
+    # weak evidence and null hypothesis does not hold
+    dfgene <- rbind(dfp,dfn) %>% subset(p.adjust < 0.1)
+  }
+  
+  # extract gene list
+  gene.candidates <- as.character(unique(dfgene$Gene))
+  
+  ## create temporary dataframe
+  # temp.dfexp <- b.out
+  ## extract drug sensitivity
+  # sensitivity <- df.DR2mod %>% subset(Drug == dn)
+  ## add sensitivity to cell lines
+  # temp.dfexp$Class <- sensitivity$Sensitivity[match(temp.dfexp$Cell,sensitivity$Cell)]
+  
+  ## find which genes are significantly expression in each drug
+  # sig.test.gene <- lapply(1:length(unique(b.out$Gene)), function(i) {
+  #   gene <- as.character(unique(b.out$Gene))[i]
+  #   temp.exp <- b.out %>% subset(Gene == gene)
+  #   temp.exp$Cell <- gsub('_S.R','',temp.exp$Cell) %>% trimws(., which = 'both')
+  #   temp.exp$Cell <- gsub('\\.','-',temp.exp$Cell)
+  #   temp.exp$Cell <- gsub('Subtype_1-2','Subtype_1.2',temp.exp$Cell)
+  #   old.name <- c('Caffeic-APE','Mitomycin-C','Mycophenolate-Mofetil','Vinorelbine-tartrate')
+  #   new.name <- c('Caffeic APE','Mitomycin C','Mycophenolate Mofetil','Vinorelbine tartrate')
+  #   
+  #   for(i in 1:length(old.name)){
+  #     temp.exp$Cell[which(temp.exp$Cell == old.name[i])] <- new.name[i]
+  #   }
+  # 
+  #   sig.test.drug <- lapply(1:length(unique(df.DR2mod$Drug)), function(j) {
+  #     drug <- as.character(unique(df.DR2mod$Drug))[j]
+  #     expr <- temp.exp %>% subset(Cell %in% cell)
+  #     sensitivity <- df.DR2mod %>% subset(Drug == drug)
+  #     A <- merge(expr,sensitivity,by = 'Cell')
+  #     A$Sensitivity <- factor(A$Sensitivity, levels = c('Sensitive','Resistant'))
+  #     # Ax <- A %>% subset(Sensitivity == 'Sensitive')
+  #     # Ay <- A %>% subset(Sensitivity == 'Resistant')
+  #     sigvalue <- t.test(exp.fc ~ Sensitivity,
+  #                        data = A, 
+  #                        var.equal = FALSE)$p.value
+  #     output <- data.frame('Drug' = drug,
+  #                          'pvalue' = as.numeric(sigvalue))
+  #     return(output)
+  #   })
+  #   sigByDrug <- do.call(rbind,sig.test.drug)
+  #   
+  # })
+  
+  # siggenes <- temp.dfexp %>% group_by(Gene) %>% summarise(sigvalue = sig.test(Sensitive,Resistant) )
+  
+  ## create two sets of cells
+  # if it's CCA subtype
+  if(drug.name == 'Subtype_1.2') {
+    my.Sall <- df.DR2mod %>% group_by(Cell,CCA.Subgroup) %>% summarise()
+    colnames(my.Sall) <- c('Cell','Sensitivity')
+    # replace Subgroup 1 as Sensitive and Subgroup 2 as Resistant
+    my.Sall$Sensitivity <- ifelse(my.Sall$Sensitivity == 'Subgroup 1','Sensitive','Resistant')
+    # divide into two groups
+    my.S1 <- my.Sall %>% subset(Sensitivity == 'Sensitive')
+    my.S2 <- my.Sall %>% subset(Sensitivity == 'Resistant')
+    # if it's Organ subtype
+  } else if (drug.name == 'Organ_1.2') {
+    my.Sall <- df.DR2mod %>% group_by(Cell,Organ.Subgroup) %>% summarise()
+    colnames(my.Sall) <- c('Cell','Sensitivity')
+    # replace liver-like as Sensitive and pancreas-like as resistant
+    my.Sall$Sensitivity <- ifelse(my.Sall$Sensitivity == 'liver-like','Sensitive','Resistant')
+    # divide into two groups
+    my.S1 <- my.Sall %>% subset(Sensitivity == 'Sensitive')
+    # pancreas-like as resistant
+    my.S2 <- my.Sall %>% subset(Sensitivity == 'Resistant')
+    # if it's individual drug response subtype
+  } else {
+    my.S1 <- df.DR2mod %>% subset(Drug == dnn & Class.KDE == 'Sensitive') %>% dplyr::select(Cell,Class.KDE)
+    colnames(my.S1) <- c('Cell','Sensitivity')
+    my.S2 <- df.DR2mod %>% subset(Drug == dnn & Class.KDE == 'Resistant') %>% dplyr::select(Cell,Class.KDE)
+    colnames(my.S2) <- c('Cell','Sensitivity')
+    # put them to gether for later use
+    my.Sall <- rbind(my.S1,my.S2)
+  }
+  
+  # create an input table for selection of predictive genes using random forest model
+  # using fold-change of expression levels of cell lines compared to population's median
+  dx <- b.out %>% subset(Cell %in% to & Gene %in% gene.candidates)
+  dx <- dcast(dx, Cell ~ Gene, value.var = 'fc.Expr')
+  
+  # add drug Sensitivity by cell matching to the table
+  dx$Sensitivity <- my.Sall$Sensitivity[match(dx$Cell,my.Sall$Cell)]
+  
+  ### Random sampling 100-times
+  # define number of fold to be performed
+  fold <- 100
+  # a list of cells in sensitive and resistant group
+  S1 <- my.S1$Cell
+  S2 <- my.S2$Cell
+  
+  # check number of cell in each group
+  no.S1 <- as.numeric(length(S1))
+  no.S2 <- as.numeric(length(S2))
+  
+  # each group must consist of at least 3 cell lines
+  set.seed(100)
+  if (no.S2 < 3) {
+    # down sampling S1
+    rnd.sample.S1 <- lapply(1:fold, function(n) sample(S1, 3, replace = FALSE))
+    # keep S2
+    rnd.sample.S2 <- lapply(1:fold, function(n) sample(S2, no.S2, replace = FALSE))
+  } else if (no.S1 < 3) {
+    # down sampling S2
+    rnd.sample.S2 <- lapply(1:fold, function(n) sample(S2, 3, replace = FALSE))
+    # keep S1
+    rnd.sample.S1 <- lapply(1:fold, function(n) sample(S1, no.S1, replace = FALSE))
+  } else {
+    rnd.sample.S1 <- lapply(1:fold, function(n) sample(S1, 3, replace = FALSE))
+    # random sample 77% from S2
+    rnd.sample.S2 <- lapply(1:fold, function(n) sample(S2, 3, replace = FALSE))
+  }
+  # create a list of random sampled Cells
+  rnd.sample.list <- lapply(1:fold, function(n) {
+    
+    c(rnd.sample.S1[[n]],rnd.sample.S2[[n]])
+    
+  })
+  
+  # Next, we generated gene expression levels from list of cell lines above.
+  
+  ### In this step, gene expression level would be used to predict class of cell lines (n = 6)
+  # idead taken from https://stackoverflow.com/questions/47960427/how-to-calculate-the-oob-of-random-forest
+  # loop would run 100 times
+  cvrf.out <- lapply(1:fold, function(f) { #5 corresponds to the number of folds defined earlier
+    # f <- 1
+    # create x matrix of expression levels from list of cell lines
+    dataset <- dx %>% subset(Cell %in% c(rnd.sample.list[[f]])) %>% `rownames<-`(., NULL) %>% 
+      tibble::column_to_rownames(., var = 'Cell')
+    
+    # count number of sensitive and resistant cells
+    no.S <- dataset %>% subset(Sensitivity == 'Sensitive') %>% nrow()
+    no.R <- dataset %>% subset(Sensitivity == 'Resistant') %>% nrow()
+    # if there was 1 cell in the group, we added two repeated of the single row
+    if(no.S == 1) {
+      df <- dataset %>% subset(Sensitivity == 'Sensitive')
+      df <- df[rep(seq_len(nrow(df)), each = 2),]
+      dataset <- rbind(dataset, df)
+    } else if(no.R == 1) {
+      df <- dataset %>% subset(Sensitivity == 'Resistant')
+      df <- df[rep(seq_len(nrow(df)), each = 2),]
+      dataset <- rbind(dataset, df)
+    } else {
+      dataset <- dataset
+    }
+    # add factor levels for random forest function
+    dataset$Sensitivity <- factor(dataset$Sensitivity, levels = c('Sensitive','Resistant'))
+  
+    # build a control for training model
+    # require(caret)
+    set.seed(100)
+    control <- caret::trainControl(method = 'LOOCV',
+                                   number = 100,
+                                   # repeats = 5,
+                                   search = 'grid',
+                                   savePredictions = 'final',
+                                   classProbs = TRUE, 
+                                   summaryFunction = twoClassSummary,
+                                   selectionFunction = 'best',
+                                   sampling = 'down',
+                                   allowParallel = TRUE)
+    
+    # build random forest model
+    train.rf <- caret::train(Sensitivity ~ .,
+                           data = dataset,
+                           method = 'rf', 
+                           metric = 'ROC',
+                           # tuneGrid = grid,
+                           trControl = control,
+                           na.omit = FALSE,
+                           importance = TRUE)
+    
+    # # built svm model
+    # train.svmRadial <- caret::train(x = dataset[,1:390],
+    #                                 y = dataset$Sensitivity,
+    #                                 method = 'svmRadial',
+    #                                 preProc = c("center","scale"),
+    #                                 metric = 'ROC',
+    #                                 trControl = control.svm)
+    
+    # # built boosted classification tree model
+    # train.ada <- caret::train(Sensitivity ~ .,
+    #                           data = dataset,
+    #                           method = 'ada',
+    #                           metric = 'ROC',
+    #                           trControl = control)
+
+    # # built generalized linear model
+    # train.glm <- caret::train(Sensitivity ~ .,
+    #                                data = dataset,
+    #                                method = 'glm',
+    #                                metric = 'ROC',
+    #                                trControl = control)
+
+    testset <- dx %>% subset(!Cell %in% c(rnd.sample.list[[f]])) %>% `rownames<-`(., NULL) %>%
+      tibble::column_to_rownames(., var = 'Cell')
+    
+    # check testset data, at least 1 sample should be positive
+    idxS <- which(testset$Sensitivity == 'Sensitive')
+    idxR <- which(testset$Sensitivity == 'Resistant')
+    
+    if(is_empty(idxS)) {
+      # get 1 row of positive Cell
+      addrow <- dx %>% subset(Cell %in% c(rnd.sample.list[[1]])) %>% subset(Sensitivity == 'Sensitive') %>%
+        sample_n(., 1) %>% `rownames<-`(., NULL) %>% tibble::column_to_rownames(., var = 'Cell')
+      testset <- rbind(testset,addrow)
+    } else if (is_empty(idxR)) {
+      addrow <- dx %>% subset(Cell %in% c(rnd.sample.list[[1]])) %>% subset(Sensitivity == 'Resistant') %>%
+        sample_n(., 1) %>% `rownames<-`(., NULL) %>% tibble::column_to_rownames(., var = 'Cell')
+      testset <- rbind(testset,addrow)
+    } else {
+      testset <- testset
+    }
+
+    # add factor level
+    testset$Sensitivity <- factor(testset$Sensitivity, levels = c('Sensitive','Resistant'))
+
+    # perform prediction
+    predset <- predict(train.rf,type = 'prob', testset[,-(which(colnames(testset) == 'Sensitivity'))])
+    # add observed class
+    predset$observe <- testset$Sensitivity[match(rownames(predset),rownames(testset))]
+    # add predicted class
+    predset2 <- predset %>% mutate(predict = ifelse(Sensitive > Resistant, 'Sensitive','Resistant'))
+    rownames(predset2) <- rownames(predset)
+    
+    predset2$observe <- factor(predset2$observe, levels = c('Sensitive','Resistant'))
+    predset2$predict <- factor(predset2$predict, levels = c('Sensitive','Resistant'))
+        
+    AUC <- pROC::roc(observe ~ Sensitive, data = predset2)$auc
+    
+    # accuracy <- caret::confusionMatrix(predset, as.factor(testset$Sensitivity))
+    # ba <- accuracy$byClass[[11]]
+
+    
+    # 
+    # outputs <- data.frame('Drug' = ,
+    #                       'Model' = j,
+    #                       'Round' = as.numeric(ba))
+    
+    ### Add criteria for stringent selection of genes
+    # we use two approaches to obtain useful variables
+    # 1. obtain variables from random forest model
+    varimp.rf <- caret::varImp(train.rf, scale = TRUE)
+    varimp.table <- as.data.frame(varimp.rf$importance)
+    
+    # filter variable using varimp > 80
+    varimp.table <- varimp.table %>% subset(Sensitive > 80)
+    
+    # 2. calculate area under ROC of each variable, regardless of the random forest model
+    roc_imp <- caret::filterVarImp(x = dataset[, -ncol(dataset)],
+                            y = dataset$Sensitivity,
+                            nonpara = TRUE)
+    # filter variable using a cut-off point of AUC = 1 for excellent classifiers.
+    varimp.roc <- roc_imp %>% subset(Sensitive == 1)
+
+    # find intersect genes
+    sel.genes <- intersect(rownames(varimp.roc), rownames(varimp.table))
+
+    # use to selected variables from ROC to subset variables from random forest model
+    varimp.table2 <- varimp.table %>% subset(rownames(.) %in% sel.genes) #%>%
+    #subset(Sensitive >= 80)
+    varimp.roc <- varimp.roc %>% subset(rownames(.) %in% sel.genes)
+    
+    outputs <- data.frame('Gene' = rownames(varimp.table2),
+                          'Drug' = rep(dnn,nrow(varimp.table2)),
+                          'test.ROC.AUC' = rep(as.numeric(AUC),nrow(varimp.table2)),
+                          # 'train.ROC.AUC' = varimp.roc$Sensitive,
+                          'Varimp.Score' = varimp.table2$Sensitive)
+    return(outputs)
+  })
+  
+  # Build a list of genes that pass the criteria
+  CV_VIP <- do.call(rbind,cvrf.out)
+  
+  if(is.null(CV_VIP) != TRUE) {
+    table.out <- CV_VIP %>% subset(test.ROC.AUC >= 0.8)
+    table.out <- table.out[!duplicated(table.out$Gene),] %>% as.data.frame()
+    # add drug name
+    table.out$Drug <- rep(dnn,nrow(table.out))
+    
+    
+  } else {
+    
+    table.out <- data.frame('Gene' = NA,
+                            'Drug' = dnn,
+                            'test.ROC.AUC' = paste0('< 0.8'),
+                            # 'train.ROC.AUC' = paste0('< 0.8'),
+                            'Varimp.Score' = NA
+                            )
+    
+  }
+  
+  return(table.out)
+}
+```
+
+
+Perform biomarker selection for 82 drugs.
+```{r}
+# run biomarker selection 
+Biomarkers.test <- lapply(1:82,function(x) {CVV(x,DrugInit,df.input,df.DR2mod,b.out)})
+# generate table results
+Biomarkers <- do.call(rbind, Biomarkers.test)
+
+```
+
+Save table for selected genes
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/prediction_function')
+# write.csv(Biomarkers.test.list, file = 'PredictedGenes_20191111.csv', quote = FALSE, row.names = FALSE)
+# Biomarkers.test.list <- read.csv('PredictedGenes_11072019_v2.csv',header = TRUE,stringsAsFactors = TRUE)
+```
+
+Evaluate ROC AUC of different train models (randomforest, ada, glm) using CCA cell line dataset
+```{r}
+require(ggplot2)
+require(plotROC)
+
+# selected 10 of 100 folds in the random combination of cell lines
+sel.fold <- c(10,20,30,40,50,60,70,80,90,100)
+
+modelPerm <- lapply(1:length(sel.fold), function(n) {
+  
+  f <- sel.fold[n]
+  
+  dataset <- dx %>% subset(Cell %in% c(rnd.sample.list[[f]])) %>% `rownames<-`(., NULL) %>% 
+    tibble::column_to_rownames(., var = 'Cell')
+  
+  # count number of sensitive and resistant cells
+  no.S <- dataset %>% subset(Sensitivity == 'Sensitive') %>% nrow()
+  no.R <- dataset %>% subset(Sensitivity == 'Resistant') %>% nrow()
+  # if there was 1 cell in the group, we added two repeated of the single row
+  if(no.S == 1) {
+    df <- dataset %>% subset(Sensitivity == 'Sensitive')
+    df <- df[rep(seq_len(nrow(df)), each = 2),]
+    dataset <- rbind(dataset, df)
+  } else if(no.R == 1) {
+    df <- dataset %>% subset(Sensitivity == 'Resistant')
+    df <- df[rep(seq_len(nrow(df)), each = 2),]
+    dataset <- rbind(dataset, df)
+  } else {
+    dataset <- dataset
+  }
+  # add factor levels for random forest function
+  dataset$Sensitivity <- factor(dataset$Sensitivity, levels = c('Sensitive','Resistant'))
+  
+  # build a control for training model
+  # require(caret)
+  set.seed(100)
+  control <- caret::trainControl(method = 'LOOCV',
+                                 number = 100,
+                                 # repeats = 5,
+                                 search = 'grid',
+                                 savePredictions = 'final',
+                                 classProbs = TRUE, 
+                                 summaryFunction = twoClassSummary,
+                                 selectionFunction = 'best',
+                                 sampling = 'down',
+                                 allowParallel = TRUE)
+  
+  # build random forest model
+  train.rf <- caret::train(Sensitivity ~ .,
+                           data = dataset,
+                           method = 'rf', 
+                           metric = 'ROC',
+                           # tuneGrid = grid,
+                           trControl = control,
+                           na.omit = FALSE,
+                           importance = TRUE)
+  
+  # # built svm model
+  # train.svmRadial <- caret::train(x = dataset[,1:390],
+  #                                 y = dataset$Sensitivity,
+  #                                 method = 'svmRadial',
+  #                                 preProc = c("center","scale"),
+  #                                 metric = 'ROC',
+  #                                 trControl = control.svm)
+  
+  # built boosted classification tree model
+  train.ada <- caret::train(Sensitivity ~ .,
+                            data = dataset,
+                            method = 'ada',
+                            metric = 'ROC',
+                            trControl = control)
+  
+  # built generalized linear model
+  train.glm <- caret::train(Sensitivity ~ .,
+                            data = dataset,
+                            method = 'glm',
+                            metric = 'ROC',
+                            trControl = control)
+  
+  # create table from train model of each classifier
+  train.rf$pred$model <- rep('RF',nrow(train.rf$pred))
+  # train.svmRadial$pred$model <- rep('SVM Radial',8)
+  train.glm$pred$model <- rep('GLM',nrow(train.glm$pred))
+  train.ada$pred$model <- rep('ADA',nrow(train.ada$pred))
+  
+  # defined columns
+  sel.cols <- c('model','pred','obs','Sensitive','Resistant')
+  # subset data by column
+  my.rf <- train.rf$pred %>% dplyr::select(all_of(sel.cols))
+  # my.svm <- train.svmRadial$pred %>% dplyr::select(sel.cols)
+  my.glm <- train.glm$pred %>% dplyr::select(all_of(sel.cols))
+  my.ada <- train.ada$pred %>% dplyr::select(all_of(sel.cols))
+  
+  # put together 
+  train.all <- rbind(my.rf, my.glm, my.ada)
+  
+  # add factor levels
+  train.all$model <- factor(train.all$model, levels = unique(train.all$model))
+  
+  # draw a plot
+  train.ROC <- ggplot(train.all, 
+                      aes(m = Sensitive, 
+                          d = factor(obs, levels = c("Sensitive", "Resistant")))) + 
+    geom_roc(hjust = -0.4, vjust = 1.5, labelsize = 0,pointsize = 0.1) + 
+    geom_abline(intercept = 0, 
+                slope = 1, 
+                linetype = 'dashed', 
+                color = 'gray', 
+                size = 0.2) +
+    facet_grid(. ~ model) +
+    coord_equal() +
+    theme_minimal() +
+    theme(
+      text = element_text(size = 12),
+      axis.text = element_text(size = 6),
+      axis.title = element_text(size = 8)
+    ) +
+    labs(x = 'False Positive Rate \n(1-Specificity)',
+         y = 'True Positive Rate \n(Sensitivity)')
+  
+  # calculate AUC
+  train.ROC.AUC <- plotROC::calc_auc(train.ROC)
+  train.ROC.AUC$model <- c('RF','GLM','ADA') %>% as.factor()
+  
+  # add fold number
+  train.ROC.AUC$n <- as.numeric(n)
+  
+  output <- train.ROC.AUC
+  
+  return(output)
+  
+})
+
+trainModel <- do.call(rbind,modelPerm)
+
+stopCluster(cluster)
+```
+
+```{r}
+# add factor levels
+trainModel$model <- factor(trainModel$model, levels = c('RF','GLM','ADA'))
+
+# stat comparison pairs
+my_comparisons <- list( c('RF', 'GLM'), c('RF', 'ADA'), c('GLM', 'ADA') )
+
+require(ggpubr)
+# draw box and whisker plot with dots
+FigS6B2 <- ggboxplot(trainModel, 
+          x = 'model', 
+          y = 'AUC',
+          shape = 'model',
+          add = 'dotplot') +
+  stat_compare_means(comparisons = my_comparisons, 
+                     method = 'wilcox.test',) + 
+  theme(
+    legend.position = 'right'
+  ) +
+  labs(shape = 'Model',
+       x = '')
+  
+ModelPerform
+```
+
+Print train model's AUC output
+```{r}
+setwd('~/CCA/module2_results')
+ggsave(FigS6B2,
+       filename = 'TrainModel_AUC_20200618.pdf',
+       height = 10,
+       width = 9,
+       units = 'cm',
+       device = cairo_pdf
+       )
+
+dev.off()
+```
+
