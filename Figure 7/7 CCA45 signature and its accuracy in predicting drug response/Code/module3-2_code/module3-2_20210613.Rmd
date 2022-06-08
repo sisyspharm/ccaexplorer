@@ -1,0 +1,470 @@
+---
+title: "Module 3-2 Quality of predictive biomarkers (Figure S6C)"
+author: "Patipark Kueanjinda"
+date: "Updated on June 22, 2020"
+output: html_notebook
+---
+
+Module 3-2 is used to:
+1. test the quality of predictive biomarkers.
+
+
+Download patient classification data
+```{r}
+# download patient classification
+setwd('~/CCA/module3_data2')
+
+df.ptclass <- read.csv('GSE76297_patient_classification.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Download extracted core genes from previous analysis using CCA cell lines
+```{r}
+# next we will subset Genes, Expression values and test for our predictive markers
+# download top predictive genes from previous analysis
+setwd('~/CCA/module3_results')
+# write.csv(SubTable3,file = 'Significant_Biomarkers_20Drugs_07082019_02.csv',quote = FALSE,row.names = FALSE)
+
+Biomarkers <- read.csv('ListOfClassifierGenes.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# Biomarkers <- Biomarkers[-c(1:3),]
+# colnames(Biomarkers) <- c('Gene','Drug')
+```
+
+```{r}
+require(tidyverse)
+myGenes <- Biomarkers %>% subset(Drug == 'Subtype_1.2')
+```
+
+Remove 1st row and change column header
+```{r}
+# note that the genes were ranked by Gini index
+# remove Gini column row
+
+topgenes <- myGenes$Gene
+```
+
+We will combine gene expression from patients with CCA cell lines.
+Download CCA cell line data
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA/module3_data2')
+# df.explevel <- read.csv('Expression_level_ALL_20191111.csv', header = TRUE, stringsAsFactors = FALSE)
+
+setwd('~/CCA/module3_data2')
+df.explevel <- read.csv('Expression_level_ALL_20200611.csv', header = TRUE, stringsAsFactors = FALSE)
+# df.explevel <- read.csv('Expression_level_ALL_07042019.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Data_Module_3_alldrugs_biomarkers')
+# df.explevel <- read.csv('Expression_level_ALL_20191009.csv', header = TRUE, stringsAsFactors = FALSE)
+```
+
+Prepare CCA cell line gene expression data.
+```{r}
+# convert old CCA names to new CCA names
+from <- c('KKU.213','KKU.214','KKU.156','HuCCA.1','RBE','KKK.D138','HuH.28','KKU.055','KKU.100','KKK.D068','KKK.D131','HuCCT.1','SSP.25','TFK.1','YSCCC')
+
+to <- c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138','HuH-28','KKU-055','KKU-100','KKK-D068','KKK-D131','HuCCT-1','SSP-25','TFK-1','YSCCC')
+
+map <- setNames(to,from)
+
+# rename cell names in df.explevel
+ln.col <- length(colnames(df.explevel))
+b <- lapply(1:ln.col, function(n) {
+  idx.name <- which(colnames(df.explevel) %in% names(map))
+  if (n %in% idx.name){
+    a <- as.data.frame(df.explevel[,c(n)])
+    colnames(a)[1] <- map[which(names(map) == colnames(df.explevel)[n])]
+  } else {
+    a <- as.data.frame(df.explevel[,c(n)])
+    colnames(a)[1] <- colnames(df.explevel)[n]
+   }
+  return(a)
+})
+# c-bind data
+df.expr2 <- do.call(cbind,b)
+# rename column
+colnames(df.expr2)[1] <- 'Gene'
+# reshape df.expr2
+df.cca <- reshape2::melt(df.expr2, id.vars = 'Gene', variable.name = 'Cell', value.name = 'Explevel')
+# assign Class according to Cell
+S1 <- c('KKU-213', 'KKU-214', 'KKU-156', 'HuCCA-1', 'RBE','KKK-D138')
+S2 <- c('TFK-1','YSCCC','SSP-25','KKU-100','HuCCT-1','KKK-D131','KKU-055','KKK-D068','HuH-28')
+# subset data using Cells from S1 and S2
+df.cca <- df.cca %>% subset(Cell %in% c(S1,S2))
+# assign cell subtypes to CCA cell lines
+df.cca$Class <- ifelse(df.cca$Cell %in% S1,'CCA.Subgroup1','CCA.Subgroup2')
+
+# subset specific genes
+df.cca.sub <- df.cca #%>% subset(Gene %in% topgenes)
+
+# calculate mean of duplicated rows
+# df.cca.sub <- plyr::ddply(df.cca.sub, c('Gene','Cell','Class'), plyr::numcolwise(mean))
+
+# scale explevel per gene across patient samples
+scale_this <- function(x){
+  (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+}
+
+# rescale expression level of genes across cell lines
+df.b <- df.cca.sub %>% group_by(Gene) %>% mutate(scExplevel = scale_this(Explevel))
+# reshape data
+m.cca <- reshape2::dcast(df.b, Gene ~ Cell, value.var = 'scExplevel')
+# assign first column to rownames
+m.cca <- tibble::column_to_rownames(m.cca, var = 'Gene')
+cca <- m.cca
+```
+
+Download Jusakul et al. (2017) data
+```{r}
+setwd('~/CCA/module3_data2')
+
+expr.apinya <- read.csv('GSE89747_CCA_Processed.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# annotation.apinya <- read.csv('GSE89747_SampleID_Map.csv', header = TRUE, stringsAsFactors = FALSE)
+annotation.apinya <- read.csv('Apinya_clinical_data_tableS1.csv', header = TRUE, stringsAsFactors = FALSE)
+
+anno.apinya.convert <- read.csv('GSE89747_SampleID_Map.csv', header = FALSE, stringsAsFactors = FALSE)
+colnames(anno.apinya.convert) <- c('ID','Patient_ID')
+```
+
+Process expression data
+```{r}
+colnames(expr.apinya)[1] <- 'Gene'
+
+expr.apinya2 <- reshape2::melt(expr.apinya, id.vars = c('Gene'), variable.name = c('Patient'), value.name = 'expr')
+
+expr.apinya3 <- expr.apinya2 %>% group_by(Gene,Patient) %>% summarise(expr = mean(expr))
+
+expr.apinya4 <- reshape2::dcast(expr.apinya3, Gene ~ Patient, value.var = 'expr')
+
+expr.apinya4 <- tibble::column_to_rownames(expr.apinya4, var = 'Gene')
+# convert patient ID in Apinya's data
+# remove prefix X
+strx <- gsub('^X','',colnames(expr.apinya4))
+colnames(expr.apinya4) <- strx
+id.cols <- which(!is.na(match(colnames(expr.apinya4), anno.apinya.convert$ID)))
+# select non-NA column
+expr.apinya4 <- expr.apinya4 %>% dplyr::select(id.cols)
+colnames(expr.apinya4) <- anno.apinya.convert$Patient_ID[match(colnames(expr.apinya4), anno.apinya.convert$ID)]
+
+# expression data received from the author were normalized (probably to matched non-tumor controls)
+# scale gene expression by gene across samples
+ap <- tibble::rownames_to_column(expr.apinya4, var = 'Gene')
+app <- reshape2::melt(ap, id.vars = 'Gene', variable.name = 'Patient_ID', value.name = 'expr')
+
+# subset specific genes
+apinya <- app %>% group_by(Gene) %>% mutate(scexpr = scale_this(expr)) %>% 
+  # subset(Gene %in% topgenes) %>% 
+  reshape2::dcast(., Gene ~ Patient_ID, value.var = 'scexpr') %>% 
+  tibble::column_to_rownames(., var = 'Gene') 
+
+### Apinya
+anno.apinya <- annotation.apinya %>% dplyr::select(c('Sample.ID','Expanded.cluster'))
+anno.apinya$Expanded.cluster[anno.apinya$Expanded.cluster == 'N/A'] <- NA
+# remove NA rows
+# anno.apinya <- anno.apinya[-c(which(is.na(anno.apinya$Expanded.cluster))),]
+anno.apinya$Expanded.cluster <- as.numeric(anno.apinya$Expanded.cluster)
+# anno.apinya <- anno.apinya[!is.na(anno.apinya$Expanded.cluster),]
+# id rows
+id.rows <- anno.apinya$Sample.ID
+# create a vector
+subgroup.apinya <- anno.apinya$Expanded.cluster
+names(subgroup.apinya) <- anno.apinya$Sample.ID
+# make the format to fit with txt file
+txtformat.apinya <- data.frame('id' = names(subgroup.apinya),
+                            'subgroup' = subgroup.apinya
+                            )
+# subset data
+intersected.samples <- intersect(txtformat.apinya$id,colnames(apinya))
+
+apinya <- apinya[,c(which(colnames(apinya) %in% intersected.samples))]
+
+# 117 patients with RNA seq data
+# Add AREG TCOF1 TNFAIP2 TP53 = 0 to apinya data set
+extragenes <- matrix(data = 0, nrow = 4, ncol = ncol(apinya)) %>% as.data.frame()
+
+colnames(extragenes) <- colnames(apinya)
+rownames(extragenes) <- c('AREG','TCOF1','TNFAIP2','TP53')
+
+apinya <- rbind(apinya, extragenes)
+
+```
+
+We merege the data based matching rownames.
+```{r}
+# find common genes across 3 data sets
+# shared.genes <- intersect(rownames(tiger),rownames(apinya))
+# 
+# shared.genes <- intersect(shared.genes, rownames(cca))
+# only cca and apinya
+shared.genes <- intersect(rownames(apinya), rownames(cca))
+
+# Transform data from microarray in bead array in Apinya to RNA-seq in CCA using traning distribution matching (TDM).
+# Cross-platform normalization for microarray and RNA-seq data for machine learning application.
+# DOI: 10.7717/peerj.1621
+
+apinya2 <- apinya[c(which(rownames(apinya) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+cca2 <- cca[c(which(rownames(cca) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+
+# gene column must be 'gene'
+apinya.tdm <- TDM::tdm_transform(ref_data = data.table(cca2), target_data = data.table(apinya2))
+
+cca.tdm <- cca2 #TDM::tdm_transform(ref_data = data.table(apinya2), target_data = data.table(cca2))
+
+# add annotation
+apinya3 <- apinya.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'apinya')
+
+cca3 <- cca.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'cca')
+# tiger3 <- tiger.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = 'tiger')
+
+# merge to form a large matrix
+# only cca and apinya
+dat.tdm <- rbind(apinya3,cca3)
+
+dat.tdm$expr <- as.numeric(dat.tdm$expr)
+
+dat.tdm <- dat.tdm %>% mutate(subgroup = ifelse(dataset == 'cca' & ID %in% to[1:6], 'CCA1',
+                                ifelse(dataset == 'cca' & ID %in% to[7:15], 'CCA2', 'unk')))
+```
+
+```{r}
+# subset data using 45 biomarkers
+datin.expr <- dat.tdm %>% 
+  subset(gene %in% topgenes) %>% # select only candidate genes
+  reshape2::dcast(., ID ~ gene, value.var = 'expr') %>% tibble::column_to_rownames(., var = 'ID')
+
+# transform data frame from datin.expr TDM-normalized gene expression.
+# 45 genes
+dset <- t(datin.expr) %>% as.data.frame()
+
+# subset only CCA data from both gene expression and clinical data
+dset.cca <- dset %>% t() %>% as.data.frame() %>% 
+  subset(rownames(.) %in% to)
+
+```
+
+We asked "Do these biomarkers specific to cell line's phenotypes such as drug response, organ status, OV-infection?"
+We used PLS-DA to find PCs and their percent of variance explained. 
+
+```{r}
+# use 15 cell lines in the analysis
+cca.45bio <- dset.cca
+
+# add metadata
+cca.45bio$drugSubtype <- ifelse(rownames(cca.45bio) %in% c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138'),'CCA1','CCA2')
+cca.45bio$organSubtype <- ifelse(rownames(cca.45bio) %in% c('RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28'),'Liver-like','Pancreas-like')
+cca.45bio$OVSubtype <- ifelse(rownames(cca.45bio) %in% c('KKU-213','KKU-214','KKU-156','KKK-D068','KKK-D131','KKK-D138','KKU-100','KKU-055','HuCCA-1'),'Fluke-pos','Fluke-neg')
+
+# add factor level
+cca.45bio$drugSubtype <- factor(cca.45bio$drugSubtype, levels = c('CCA1','CCA2'))
+cca.45bio$organSubtype <- factor(cca.45bio$organSubtype, levels = c('Liver-like','Pancreas-like'))
+cca.45bio$OVSubtype <- factor(cca.45bio$OVSubtype, levels = c('Fluke-pos','Fluke-neg'))
+
+# use mixOmics' PLS-DA 
+set.seed(100)
+# Drug subtype
+plsr.drug <- mixOmics::plsda(X = cca.45bio[,-c(46,47,48)], 
+                             Y = cca.45bio[,c(46)],
+                             ncomp = 15)
+
+# Organ subtype
+plsr.organ <- mixOmics::plsda(X = cca.45bio[,-c(46,47,48)], 
+                              Y = cca.45bio[,c(47)],
+                              ncomp = 15)
+
+# OV-infection 
+plsr.ov <- mixOmics::plsda(X = cca.45bio[,-c(46,47,48)], 
+                           Y = cca.45bio[,c(48)],
+                           ncomp = 15)
+
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.drug)
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.organ)
+```
+
+```{r}
+set.seed(100)
+mixOmics::plotIndiv(plsr.ov)
+```
+
+Use 'ropls' package to obtain quality of prediction (Q2).
+CCA drug response
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.drug <- ropls::opls(cca.45bio[,-c(46,47,48)], 
+                         cca.45bio[,c(46)],
+                         crossvalI = 10)
+```
+
+Organ subtypes
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.organ <- ropls::opls(cca.45bio[,-c(46,47,48)], 
+                          cca.45bio[,c(47)],
+                          crossvalI = 10)
+```
+
+Ov infection
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.ov <- ropls::opls(cca.45bio[,-c(46,47,48)], 
+                       cca.45bio[,c(48)],
+                       crossvalI = 10)
+```
+
+Plot quality of prediction (Q-squared) of using 45 genes to predict drug subtype, organ subtype and OV-infection of CCA cell lines
+```{r}
+# extract Q2
+sumDF <- rbind(opls.drug@summaryDF,
+      opls.organ@summaryDF,
+      opls.ov@summaryDF)
+rownames(sumDF) <- c('Drug','Organ','OV')
+sumDF <- tibble::rownames_to_column(sumDF, var = 'Phenotype')
+# add factor level to phenotyps
+sumDF$Phenotype <- factor(sumDF$Phenotype, levels = c('Drug','Organ','OV'))
+# plot Quality of prediction as bar plot
+```
+
+```{r}
+require(ggpubr)
+
+figQ2a <- ggplot(sumDF,
+                aes(x = Phenotype,
+                    y = `Q2(cum)`)) +
+  geom_col(fill = 'black') +
+  ylim(0,1) +
+  theme_pubr() +
+  labs(y = 'Quality of prediction (q2)',
+       x = '')
+
+figQ2a
+```
+
+Save Q2 figure
+```{r}
+# setwd('C:/Users/patipark/Dropbox/CCA project/CCA RNA-seq/NewGeneSet_Module_InitialAnalysis/Figure_5A_files')
+# ggsave(figQ2,
+#        filename = 'Figure_Q2a_Predict_Phenotype_20200331.pdf', 
+#        height = 3,
+#        width = 2.5, 
+#        units = 'in',
+#        device = cairo_pdf)
+```
+
+Then, can the 45-gene CCA biomarkers predict CCA subtype better than whole transcriptome?
+```{r}
+# expression level of whole transcriptome
+cca.whole <- dat.tdm %>% subset(dataset == 'cca')
+
+cca.whole <- reshape2::dcast(cca.whole, ID ~ gene, value.var = 'expr', fun.aggregate = mean)
+
+cca.whole <- tibble::column_to_rownames(cca.whole, var = 'ID')
+
+# add metadata
+cca.whole$drugSubtype <- ifelse(rownames(cca.whole) %in% c('KKU-213','KKU-214','KKU-156','HuCCA-1','RBE','KKK-D138'),'CCA1','CCA2')
+cca.whole$organSubtype <- ifelse(rownames(cca.whole) %in% c('RBE','KKK-D138','SSP-25','KKU-100','KKU-055','KKK-D068','HuH-28'),'Liver-like','Pancreas-like')
+cca.whole$OVSubtype <- ifelse(rownames(cca.whole) %in% c('KKU-213','KKU-214','KKU-156','KKK-D068','KKK-D131','KKK-D138','KKU-100','KKU-055','HuCCA-1'),'Fluke-pos','Fluke-neg')
+
+# add factor level
+cca.whole$drugSubtype <- factor(cca.whole$drugSubtype, levels = c('CCA1','CCA2'))
+cca.whole$organSubtype <- factor(cca.whole$organSubtype, levels = c('Liver-like','Pancreas-like'))
+cca.whole$OVSubtype <- factor(cca.whole$OVSubtype, levels = c('Fluke-pos','Fluke-neg'))
+```
+
+CCA drug response
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.drug.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                           cca.whole[,c(10762)],
+                           crossvalI = 10)
+```
+
+Organ subtype
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.organ.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                            cca.whole[,c(10763)],
+                            crossvalI = 10)
+```
+
+Ov infection
+```{r}
+set.seed(100)
+# by default, Cross-validation = 10, algorithm = NIPALS, random permutation = 20
+opls.ov.w <- ropls::opls(cca.whole[,-c(10762,10763,10764)], 
+                         cca.whole[,c(10764)],
+                         crossvalI = 10)
+```
+
+```{r}
+# extract Q2
+sumDF.w <- rbind(opls.drug.w@summaryDF,
+                 opls.organ.w@summaryDF,
+                 opls.ov.w@summaryDF)
+rownames(sumDF.w) <- c('Drug','Organ','OV')
+sumDF.w <- tibble::rownames_to_column(sumDF.w, var = 'Phenotype')
+# add factor level to phenotyps
+sumDF.w$Phenotype <- factor(sumDF.w$Phenotype, levels = c('Drug','Organ','OV'))
+```
+
+Compare Q2 results from 45 genes and whole transcriptome in prediction of CCA drug response, organ subtype, and Ov infection.
+```{r}
+# combine opls of 45-bio and whole-transcriptome sets together
+sumDF$model <- 'Biomarkers'
+sumDF.w$model <- 'All'
+
+# combine two summary tables
+sumDF.all <- rbind(sumDF,sumDF.w)
+
+# add factor level to model
+sumDF.all$model <- factor(sumDF.all$model, levels = c('Biomarkers','All'))
+
+# set non-significant model (pval < 0.05) to near zero
+sumDF.all$`Q2(cum)` <- ifelse(sumDF.all$pQ2 > 0.05, 0.005, sumDF.all$`Q2(cum)`)
+```
+
+```{r}
+# plot Quality of prediction as bar plot
+require(ggpubr)
+
+FigS5C <- ggplot(sumDF.all,
+       aes(x = Phenotype,
+           y = `Q2(cum)`,
+           fill = model)) +
+  geom_col(position = position_dodge2()) +
+  geom_hline(yintercept = 0.005, color = 'black',lty = 'dotted') +
+  scale_fill_manual(values = c('Biomarkers' = 'black',
+                               'All' = 'gray50')) +
+  ylim(0,1) +
+  theme_pubr() +
+  theme(
+    legend.position = 'right'
+  ) +
+  labs(y = 'Quality of prediction (q2)',
+       x = '')
+
+FigS6C
+```
+
+Save Figure S5C
+```{r}
+setwd('~/CCA/module3_results')
+ggsave(FigS5C,
+       filename = 'FigureS5C_Q2_Predict_Phenotype_20200405.pdf', 
+       height = 4,
+       width = 5, 
+       units = 'in',
+       device = cairo_pdf)
+```
+ 
