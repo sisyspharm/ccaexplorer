@@ -1,0 +1,514 @@
+Sample ID,Type (Fluke-Pos/Fluke-Neg),Country,Sex,Age at surgery,Anatomical subtype,Primary Sclerosing cholangitis,HBV,HCV,Histology,TNM staging,Stage,Vital state (1=Dead),Overall survival (days),Whole Genome sequencing,Targeted Sequencing,Exome sequencing (Nakamura H. et.al. Nat. Genet. 2015),SNP array,Gene expression profiling ,DNA methylation profiling ,Cluster,Expanded cluster
+CCA_BR_1,Fluke-Neg,Brazil,M,53,Intrahepatic,No,Negative,Negative,Moderate,T3NxMx ,N/A,1,26,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_BR_2,Fluke-Neg,Brazil,F,49,Intrahepatic,No,Negative,Negative,Moderate,T3N0M1,IVB,1,566,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_BR_3,Fluke-Neg,Brazil,M,61,Intrahepatic,No,N/A,N/A,Moderate,T1N0M0,IA,1,7,No,Yes,No,Yes,No,Yes,N/A,N/A
+CCA_CH_1,Fluke-Neg,China,F,49,Perihilar,N/A,Positive,Negative,Moderate,T2bN1M0,IIB,1,425,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_2,Fluke-Pos,China,F,61,Perihilar,N/A,Negative,Negative,Poor,T2aN0M0,II,N/A,N/A,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_3,Fluke-Neg,China,M,46,Perihilar,N/A,Negative,Negative,Poor,T2bN0M0,II,1,346,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_4,Fluke-Neg,China,M,46,Extrahepatic,N/A,Negative,Negative,Moderate,T3N1M0,IIIB,0,486,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_5,Fluke-Neg,China,M,75,Intrahepatic,N/A,Negative,Negative,N/A,T1N0M0,I,0,623,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_6,Fluke-Neg,China,F,59,Intrahepatic,N/A,Negative,Negative,Moderate,T3N0M0,III,0,608,Yes,No,No,No,No,Yes,N/A,N/A
+CCA_CH_7,Fluke-Neg,China,F,71,Intrahepatic,N/A,Negative,Negative,Moderate-Poor,T1N1M0,IVA,1,69,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_CH_8,Fluke-Neg,China,M,60,Intrahepatic,N/A,Negative,Negative,Moderate-Poor,T2bN0M0,II,1,532,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_FR_1,Fluke-Neg,France,F,49,Intrahepatic,No,Negative,Negative,Poor,T1NxM0,N/A,0,2044,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_2,Fluke-Neg,France,M,78,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,0,328,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_3,Fluke-Neg,France,F,60,Intrahepatic,No,Negative,Negative,Poor,T3NxM0,N/A,0,280,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_FR_4,Fluke-Neg,France,M,75,Intrahepatic,No,Negative,Negative,Poor,T3N1M0,IVA,1,158,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_5,Fluke-Neg,France,F,76,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,0,529,No,Yes,No,Yes,No,Yes,N/A,4
+CCA_FR_6,Fluke-Neg,France,M,68,Intrahepatic,No,Negative,Negative,Moderate,T1N0M0,I,0,1924,No,Yes,No,Yes,No,Yes,N/A,4
+CCA_FR_7,Fluke-Neg,France,F,77,Intrahepatic,No,Negative,Negative,Well,T3N1M0,IVA,0,248,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_8,Fluke-Neg,France,F,73,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,0,2225,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_9,Fluke-Neg,France,M,62,Intrahepatic,No,Negative,Negative,Moderate,T4NxM0,IVA,0,1689,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_10,Fluke-Neg,France,M,29,Intrahepatic,Yes,Negative,Negative,Well,T3N1M0,IVA,0,3217,No,Yes,No,Yes,Yes,Yes,3,3
+CCA_FR_11,Fluke-Neg,France,M,45,Intrahepatic,No,Negative,Negative,Well,T2N0M0,II,0,3114,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_12,Fluke-Neg,France,F,43,Intrahepatic,No,Negative,Negative,Moderate,T4NxM0,IVA,0,267,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_13,Fluke-Neg,France,M,51,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,1,1401,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_14,Fluke-Neg,France,F,52,Intrahepatic,No,Negative,Positive,Well,T3NxM0,N/A,0,219,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_FR_15,Fluke-Neg,France,M,56,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,0,1531,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_FR_16,Fluke-Neg,France,F,78,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,0,19,No,Yes,No,Yes,Yes,Yes,3,3
+CCA_IT_1,Fluke-Neg,Italy,F,69,Intrahepatic,No,N/A,N/A,Moderate,T3N1M0,IVA,0,1071,Yes,No,No,Yes,No,Yes,N/A,4
+CCA_IT_2,Fluke-Neg,Italy,F,76,Intrahepatic,No,N/A,N/A,N/A,T3N0M0,III,0,807,Yes,No,No,Yes,No,Yes,N/A,1
+CCA_IT_3,Fluke-Neg,Italy,M,53,Intrahepatic,No,N/A,N/A,Moderate,T3N1M0,IVA,1,296,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_IT_4,Fluke-Neg,Italy,M,73,Intrahepatic,No,N/A,N/A,Moderate,T3N0M0,III,0,168,Yes,No,No,Yes,No,Yes,N/A,2
+CCA_IT_5,Fluke-Neg,Italy,F,62,Intrahepatic,No,N/A,N/A,N/A,T2N0M0,II,N/A,1200,No,No,No,Yes,No,No,N/A,N/A
+CCA_IT_6,Fluke-Neg,Italy,F,43,Intrahepatic,No,N/A,N/A,N/A,T3N1M0,IV,N/A,1560,No,No,No,Yes,No,No,N/A,N/A
+CCA_IT_7,Fluke-Neg,Italy,M,72,Intrahepatic,No,N/A,N/A,N/A,T2N1M0,IV,N/A,180,No,No,No,Yes,No,No,N/A,N/A
+CCA_IT_8,Fluke-Neg,Italy,M,70,Intrahepatic,No,N/A,N/A,N/A,T1N0M0,I,N/A,1206,No,No,No,Yes,No,No,N/A,N/A
+CCA_JP_1,Fluke-Neg,Japan,M,64,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1905,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_2,Fluke-Neg,Japan,M,65,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,0,1604,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_3,Fluke-Neg,Japan,M,60,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,0,1756,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_4,Fluke-Neg,Japan,M,72,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,0,134,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_5,Fluke-Neg,Japan,M,62,Intrahepatic,No,Negative,Positive,Moderate,T4N1M0,IVA,1,452,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_6,Fluke-Neg,Japan,M,65,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,1,574,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_7,Fluke-Neg,Japan,M,67,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,1,428,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_8,Fluke-Neg,Japan,M,66,Intrahepatic,No,Positive,Negative,Moderate,T4N0M0,IVA,1,168,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_9,Fluke-Neg,Japan,M,60,Intrahepatic,No,Negative,Negative,N/A,T2bN0M0,II,1,90,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_10,Fluke-Neg,Japan,M,31,Intrahepatic,Yes,Negative,Negative,Moderate,T4N1M0,IVA,1,386,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_JP_11,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,281,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_12,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T2bN0M0,II,N/A,228,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_13,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N1M0,IVA,N/A,166,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_14,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,784,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_15,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,N/A,N/A,N/A,N/A,N/A,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_16,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,784,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_17,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T3N0M0,IIA,N/A,3126,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_18,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,2934,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_19,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T3N0M0,IIIA,N/A,1037,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_20,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,1153,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_21,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Moderate,T2aN1M0,IIIB,N/A,583,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_22,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,532,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_23,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T2N1M0,IIB,N/A,2882,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_24,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1624,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_25,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,181,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_26,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T3N1M0,IIB,N/A,489,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_27,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,299,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_28,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,N/A,2382,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_29,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,2423,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_30,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,2319,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_31,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,319,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_32,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,N/A,2284,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_33,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,402,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_34,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,N/A,2223,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_35,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,1849,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_36,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,2204,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_37,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,53,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_38,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Positive,Negative,Moderate,T2aN0M0,II,N/A,2608,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_39,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,882,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_40,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T4N1M0,IVA,N/A,749,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_41,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,355,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_42,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N1M0,IIB,N/A,672,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_43,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,N/A,2234,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_44,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T2N0M0,IB,N/A,389,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_45,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,712,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_46,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T3N0M0,IIIA,N/A,3337,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_47,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN1M0,IVA,N/A,1791,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_48,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Moderate,T4N1M0,IVA,N/A,654,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_49,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Moderate,T4N1M0,IVA,N/A,3081,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_50,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,2288,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_51,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,501,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_52,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Positive,Moderate,T4N0M0,IVA,N/A,1977,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_53,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,1094,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_54,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,N/A,2914,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_55,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T2N0M0,IB,N/A,2920,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_56,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,2879,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_57,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Positive,Negative,Moderate,T1N0M0,I,N/A,1676,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_58,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN1M0,IIIB,N/A,1724,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_59,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T2bN0M0,II,N/A,2776,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_60,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,1334,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_61,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T2bN1M0,IVA,N/A,646,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_62,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T1N0M0,IA,N/A,2725,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_63,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T4N1M0,IVA,N/A,1380,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_64,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,2756,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_65,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,412,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_66,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T3N1M0,IIB,N/A,2929,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_67,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2N1M0,IIB,N/A,329,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_68,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,2985,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_69,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2aN1M0,IIIB,N/A,477,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_70,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2N1M0,IIB,N/A,765,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_71,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T2bN1M0,IIIB,N/A,406,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_72,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,902,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_73,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,163,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_74,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T3N0M0,IIIA,N/A,2143,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_75,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T2bN0M0,II,N/A,2463,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_76,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,2788,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_77,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,486,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_78,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T1N0M0,IA,N/A,1853,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_79,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,474,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_80,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N1M0,IIB,N/A,2304,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_81,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,1627,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_82,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T2aN0M0,II,N/A,1825,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_83,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T2bN1M0,IIIB,N/A,500,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_84,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Moderate,T3N1M0,IIB,N/A,844,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_85,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,156,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_86,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1722,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_87,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,181,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_88,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,1352,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_89,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,1835,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_90,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,755,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_91,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N1M0,IVA,N/A,174,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_92,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,762,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_93,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,175,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_94,Fluke-Neg,Japan,F,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,393,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_95,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Poor,T2aN0M0,II,N/A,90,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_96,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,2172,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_97,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,225,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_98,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,1684,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_99,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,2134,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_100,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,899,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_101,Fluke-Neg,Japan,F,N/A,Distal,No,Negative,Negative,Moderate,T3N1M0,IIB,N/A,2067,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_102,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T3N1M0,IIB,N/A,874,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_103,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,1829,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_104,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Well,T2aN0M0,II,N/A,1142,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_105,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1856,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_106,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1981,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_107,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T3N1M0,IIIB,N/A,609,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_108,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T2bN0M0,II,N/A,1983,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_109,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T2N0M0,IB,N/A,899,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_110,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,380,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_111,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,702,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_112,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,681,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_113,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,1254,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_114,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN1M0,IIIB,N/A,110,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_115,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,181,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_116,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T3N1M0,IIIB,N/A,1653,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_117,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,894,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_118,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,851,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_119,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Poor,T4N1M0,III,N/A,278,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_120,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,307,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_121,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1335,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_122,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T1N0M0,IA,N/A,887,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_123,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,IA,N/A,1348,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_124,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T2aN0M0,II,N/A,1266,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_125,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T4N1M0,IVA,N/A,1017,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_126,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,N/A,1160,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_127,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,643,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_128,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,N/A,T2N0M0,IA,N/A,1436,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_129,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,394,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_130,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Positive,Negative,Moderate,T4N1M0,IVA,N/A,445,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_131,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,1135,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_132,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1911,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_133,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN1M0,IIIB,N/A,1314,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_134,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,N/A,1150,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_135,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Moderate,T2bN1M0,IVA,N/A,4,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_136,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,N/A,T2aN1M0,IVA,N/A,264,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_137,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Well,T1N0M0,I,N/A,1068,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_138,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IV,N/A,162,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_139,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T2N1M0,IIB,N/A,637,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_140,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Positive,Moderate,T2aN0M0,II,N/A,957,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_141,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,670,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_142,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T2aN0M0,II,N/A,83,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_143,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,N/A,264,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_144,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,403,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_145,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,N/A,582,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_146,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,419,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_147,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,767,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_148,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,N/A,624,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_149,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Moderate,T4N1M0,IVA,N/A,135,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_150,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T3N1M0,IIB,N/A,210,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_151,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T2aN0M0,II,N/A,428,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_152,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Poor,T3N0M0,III,N/A,472,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_153,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Poor,T3N0M0,IIA,N/A,477,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_154,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,503,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_155,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Poor,T3N1M0,IIB,N/A,34,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_156,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,388,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_157,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,314,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_158,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T4N1M0,IVA,N/A,267,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_159,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Moderate,T2aN1M0,IIIB,N/A,379,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_160,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,358,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_161,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,328,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_162,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,220,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_163,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,N/A,146,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_164,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,N/A,501,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_165,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,223,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_166,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,2259,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_167,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,1424,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_168,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,131,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_169,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Moderate,T2bN1M0,IIIB,N/A,106,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_170,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,N/A,83,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_171,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Well,T3N0M0,IIA,N/A,68,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_172,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,N/A,N/A,N/A,N/A,N/A,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_173,Fluke-Neg,Japan,M,N/A,Perihilar,No,Negative,Negative,N/A,N/A,N/A,N/A,N/A,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_174,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,N/A,N/A,N/A,N/A,N/A,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_175,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T2bN0M0,II,N/A,341,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_176,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,N/A,694,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_177,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,208,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_178,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,125,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_179,Fluke-Neg,Japan,F,N/A,Intrahepatic,N/A,Negative,Negative,Well,T4N0M0,IVA,N/A,1665,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_180,Fluke-Neg,Japan,F,N/A,Intrahepatic,N/A,Negative,Negative,Moderate,T4N1M0,IVA,N/A,1820,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_181,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,932,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_182,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,601,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_183,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Positive,Negative,Moderate,T2aN0M0,II,N/A,1281,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_184,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Positive,Moderate,T2aN0M0,II,N/A,458,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_185,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,N/A,1013,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_186,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,946,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_187,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T3N1M0,IVA,N/A,722,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_188,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,818,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_189,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,137,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_190,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T1N0M0,I,N/A,790,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_191,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Poor,T2aN0M0,II,N/A,277,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_192,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,793,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_193,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T4N1M0,IVA,N/A,144,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_194,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T2aN1M0,IVA,N/A,486,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_195,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T2aN1M0,IVA,N/A,648,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_196,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Well,T2bN1M0,IVA,N/A,1428,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_197,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,196,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_198,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,N/A,218,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_199,Fluke-Neg,Japan,M,N/A,Distal,No,Negative,Negative,Moderate,T2N1M0,IIB,N/A,438,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_200,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Positive,Well,T2bN0M0,II,N/A,2400,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_201,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,3610,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_202,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,N/A,864,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_203,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N1M0,IVA,N/A,1128,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_204,Fluke-Neg,Japan,F,N/A,Distal,No,Negative,Negative,Well,T2N0M0,IB,N/A,1758,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_205,Fluke-Neg,Japan,F,N/A,Perihilar,No,Negative,Negative,Well,T1N0M0,I,N/A,2118,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_206,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Well,T2aN0M0,II,N/A,2127,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_207,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Moderate,T3N1M0,IVA,N/A,334,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_208,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,N/A,976,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_209,Fluke-Neg,Japan,M,N/A,Intrahepatic,No,Negative,Negative,Poor,T2bN1M0,IVA,N/A,643,No,No,Yes,No,No,No,N/A,N/A
+CCA_JP_210,Fluke-Neg,Japan,F,N/A,Intrahepatic,No,Negative,Negative,N/A,N/A,N/A,N/A,51,No,No,Yes,No,No,No,N/A,N/A
+CCA_KR_1,Fluke-Neg,Korea,M,63,Intrahepatic,No,Negative,Negative,Poor,T2aN0,N/A,0,1042,No,Yes,No,Yes,No,Yes,N/A,4
+CCA_KR_2,Fluke-Neg,Korea,M,70,Intrahepatic,No,Negative,Negative,Moderate,T2bN0,N/A,1,777,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_RO_1,Fluke-Neg,Romania,M,45,Intrahepatic,No,N/A,N/A,Poor,T3N1Mx,N/A,1,212,Yes,No,No,Yes,No,No,N/A,N/A
+CCA_RO_2,Fluke-Neg,Romania,F,49,Perihilar,No,Negative,Negative,N/A,T2N0M1,IV,1,603,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_RO_3,Fluke-Neg,Romania,M,46,Perihilar,No,Negative,Negative,Moderate-Poor,T3N1M0,IIB,1,93,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_RO_4,Fluke-Neg,Romania,F,53,Intrahepatic,No,N/A,N/A,N/A,N/A,N/A,1,N/A,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_RO_5,Fluke-Neg,Romania,F,69,Intrahepatic,No,Negative,Negative,Well,N/A,N/A,1,9,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_RO_6,Fluke-Neg,Romania,M,N/A,Intrahepatic,No,N/A,N/A,N/A,N/A,N/A,1,N/A,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_RO_7,Fluke-Neg,Romania,M,68,Distal,No,Negative,Negative,Well,T1N1M0,IA,1,2304,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_RO_8,Fluke-Neg,Romania,M,47,Perihilar,No,Negative,Negative,Well,T2N0M0,II,1,325,No,Yes,No,No,No,Yes,N/A,N/A
+CCA_RO_9,Fluke-Neg,Romania,M,49,Distal,No,Negative,Negative,Well,T2N0M0,IB,1,1307,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_10,Fluke-Neg,Romania,F,61,Intrahepatic,No,Negative,Negative,poor,T3N0M0,III,0,848,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_RO_11,Fluke-Neg,Romania,F,45,Intrahepatic,No,Negative,Negative,Well,T4N0M1,IVB,1,6,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_12,Fluke-Neg,Romania,F,63,Perihilar,No,Negative,Negative,Well,T3N1M1,IVB,1,15,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_13,Fluke-Neg,Romania,M,68,Distal,No,Negative,Negative,Well,T1N0M0,IA,1,670,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_14,Fluke-Neg,Romania,M,70,Distal,No,Negative,Negative,Well,T3N1M0,IIB,1,422,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_15,Fluke-Neg,Romania,F,61,Perihilar,No,Negative,Negative,Well-Moderate,T3N0M0,IIIA,0,1722,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_RO_16,Fluke-Neg,Romania,F,58,Distal,No,Negative,Negative,Well-Moderate,T3N1M0,IIB,1,1513,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_17,Fluke-Neg,Romania,M,61,Distal,No,Negative,Negative,Well,T3N0M0,IIIA,1,755,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_18,Fluke-Neg,Romania,M,66,Intrahepatic,No,Negative,Negative,Moderate,T1NXM0,N/A,1,190,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_19,Fluke-Neg,Romania,F,66,Intrahepatic,No,Negative,Negative,Moderate,T1NXM0,N/A,1,539,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_RO_20,Fluke-Neg,Romania,F,65,Perihilar,No,Negative,Negative,Well,T1N0M0,IA,0,1986,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_21,Fluke-Neg,Romania,F,75,Intrahepatic,No,Negative,Negative,Moderate,TNxMx,N/A,1,257,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_22,Fluke-Neg,Romania,M,59,Perihilar,No,Negative,Negative,Well,T1N0M0,IA,1,582,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_23,Fluke-Neg,Romania,F,53,Perihilar,No,Negative,Negative,Well,T4N1M0,III,1,301,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_RO_24,Fluke-Neg,Romania,M,51,Perihilar,No,Negative,Negative,Well,T3N1M0,IIIB,1,629,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_25,Fluke-Neg,Romania,M,78,Intrahepatic,No,Negative,Positive,Well,T3NXM0,N/A,1,362,No,Yes,No,Yes,Yes,Yes,3,3
+CCA_RO_26,Fluke-Neg,Romania,M,30,Perihilar,No,Negative,Negative,Well,T1N0M0,I,1,1343,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_27,Fluke-Neg,Romania,F,75,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,1,167,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_28,Fluke-Neg,Romania,M,49,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,1,422,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_29,Fluke-Neg,Romania,M,72,Perihilar,No,Negative,Negative,Well,T2N0M0,II,1,1210,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_RO_30,Fluke-Neg,Romania,M,72,Perihilar,No,Negative,Negative,N/A,T4N0M0,IVA,1,270,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_31,Fluke-Neg,Romania,M,58,Distal,No,Negative,Negative,Well,T1N1M0,IIB,1,735,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_RO_32,Fluke-Neg,Romania,M,61,Distal,No,Negative,Negative,Well,T2N0M0,IB,0,2401,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_33,Fluke-Neg,Romania,F,69,Perihilar,No,Negative,Negative,Well,T1N0MX,IA,1,1892,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_34,Fluke-Neg,Romania,F,50,Intrahepatic,No,Negative,Negative,N/A,T1NxM0,N/A,0,1173,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_35,Fluke-Neg,Romania,M,62,Intrahepatic,No,Negative,Negative,Moderate,T2bNxM0,N/A,1,472,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_RO_36,Fluke-Neg,Romania,M,44,Intrahepatic,No,Negative,Negative,Well,T4N1M0,III,1,947,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_37,Fluke-Neg,Romania,M,50,Intrahepatic,No,Negative,Negative,Moderate,T3NxM0,N/A,1,6,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_RO_38,Fluke-Neg,Romania,F,44,Intrahepatic,No,Negative,Negative,Moderate,T2bN1M0,IVA,1,575,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_RO_39,Fluke-Neg,Romania,M,31,Intrahepatic,Yes,Negative,Negative,Well,t2nxmo,TBA,0,2647,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_40,Fluke-Neg,Romania,F,54,Perihilar,No,Negative,Negative,Well,T1N0M0,IA,0,2809,No,Yes,No,No,No,No,N/A,N/A
+CCA_RO_41,Fluke-Neg,Romania,F,49,Intrahepatic,No,N/A,N/A,N/A,N/A,N/A,N/A,N/A,No,No,No,Yes,No,No,N/A,N/A
+CCA_RO_42,Fluke-Neg,Romania,M,70,Distal,No,Negative,Negative,Moderate,T3N0M0,IIA,1,1500,No,No,No,No,Yes,Yes,N/A,2
+CCA_RO_43,Fluke-Neg,Romania,M,40,Intrahepatic,Yes,N/A,N/A,Well,T3N2M0,IVA,1,210,No,No,No,No,Yes,Yes,N/A,N/A
+CCA_RO_44,Fluke-Neg,Romania,F,61,Intrahepatic,No,Negative,Negative,Moderate,T3n0m1,IVB,1,159,No,No,No,No,No,Yes,N/A,N/A
+CCA_RO_45,Fluke-Neg,Romania,M,69,Intrahepatic,No,N/A,N/A,Well,NA,NA,1,276,No,No,No,No,Yes,Yes,N/A,N/A
+CCA_RO_46,Fluke-Neg,Romania,M,69,Distal,No,Negative,Negative,Well,T3N1M0,IIB,1,419,No,No,No,No,Yes,Yes,N/A,2
+CCA_SG_1,Fluke-Neg,Singapore,F,73,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,0,232,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_2,Fluke-Neg,Singapore,F,67,Intrahepatic,No,Positive,Negative,Moderate,T1N1M0,IVA,0,1154,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_3,Fluke-Neg,Singapore,F,51,Intrahepatic,No,Negative,Negative,Moderate,T1N0M0,I,0,858,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_4,Fluke-Neg,Singapore,M,61,Intrahepatic,No,Positive,Negative,Well,T1N0M0,I,0,2848,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_5,Fluke-Neg,Singapore,F,78,Intrahepatic,No,Negative,Negative,Moderate,T1N1M0,IVA,0,523,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_6,Fluke-Neg,Singapore,M,51,Intrahepatic,No,Negative,Negative,Moderate,T1N0M0,I,1,1381,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_7,Fluke-Neg,Singapore,M,68,Extrahepatic,No,Negative,Negative,Moderate-Poor,T1N0M0,I,0,898,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_8,Fluke-Neg,Singapore,M,57,Intrahepatic,No,Positive,Negative,Poor,T1N0M0,I,0,2150,Yes,No,No,Yes,Yes,Yes,3,3
+CCA_SG_9,Fluke-Neg,Singapore,F,60,Intrahepatic,No,Negative,Negative,Moderate,T1N0M1,IVB,1,91,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_10,Fluke-Neg,Singapore,M,74,Intrahepatic,No,Negative,Negative,Moderate,T1N0M0,I,0,841,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_11,Fluke-Neg,Singapore,F,69,Intrahepatic,No,Negative,Negative,Moderate,T2aN1M0,IVA,0,517,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_12,Fluke-Neg,Singapore,F,61,Intrahepatic,No,Positive,Negative,Moderate,T1N0M0,I,0,1540,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_13,Fluke-Neg,Singapore,M,60,Intrahepatic,No,N/A,N/A,Well,T1N0M0,I,0,982,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_14,Fluke-Neg,Singapore,F,61,Intrahepatic,No,Negative,Negative,Well,N/A,N/A,0,1114,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_15,Fluke-Neg,Singapore,M,53,Intrahepatic,No,No record,No record,Well,T3N0M0,III,0,990,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_16,Fluke-Neg,Singapore,M,55,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,0,867,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_17,Fluke-Neg,Singapore,F,77,Intrahepatic,No,N/A,N/A,N/A,T2bN1M0,IVA,1,540,Yes,No,No,Yes,Yes,Yes,3,3
+CCA_SG_18,Fluke-Neg,Singapore,F,71,Extrahepatic,No,Negative,Negative,Well,T3N0M0,IIA,0,129,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_SG_19,Fluke-Neg,Singapore,M,75,Intrahepatic,No,Negative,Negative,Moderate,T1aN0M0,II,0,554,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_20,Fluke-Neg,Singapore,M,56,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,0,381,Yes,No,No,Yes,Yes,Yes,4,4
+CCA_SG_21,Fluke-Neg,Singapore,F,55,Intrahepatic,No,Positive,Positive,Moderate,T4N0M0,IVA,0,1262,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_SG_22,Fluke-Neg,Singapore,M,65,Perihilar,No,N/A,N/A,Moderate,T1N0M0,I,1,16,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_23,Fluke-Neg,Singapore,M,63,Intrahepatic,No,N/A,N/A,Moderate,T2bN1M1,IVB,0,99,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_24,Fluke-Neg,Singapore,F,45,Perihilar,No,Negative,Negative,Moderate,T4N1M0,IVA,1,528,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_SG_25,Fluke-Neg,Singapore,F,74,Intrahepatic,No,Negative,Negative,Poor,T1N0M0,I,0,1129,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_SG_26,Fluke-Neg,Singapore,M,42,Perihilar,No,Negative,N/A,Moderate,T1N0M1,IV,0,392,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_27,Fluke-Neg,Singapore,F,52,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,772,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_28,Fluke-Neg,Singapore,F,67,Intrahepatic,No,Negative,Negative,Well,T1N0M0,I,0,1064,No,Yes,No,No,No,Yes,N/A,4
+CCA_SG_29,Fluke-Neg,Singapore,F,39,Intrahepatic,No,Negative,N/A,Poor,T1N0M0,I,0,406,No,Yes,No,Yes,Yes,Yes,3,3
+CCA_SG_30,Fluke-Neg,Singapore,M,62,Extrahepatic,No,Negative,Negative,Well,T3N1M0,IIB,0,242,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_31,Fluke-Neg,Singapore,M,51,Intrahepatic,No,Positive,N/A,Moderate,T2bN1M1,IVB,0,41,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_32,Fluke-Neg,Singapore,F,70,Perihilar,No,N/A,N/A,Moderate,T4N1M0,IVA,0,789,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_33,Fluke-Neg,Singapore,F,68,Perihilar,No,N/A,N/A,Moderate,T3N0M0,IIIA,1,408,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_34,Fluke-Neg,Singapore,M,35,Perihilar,No,N/A,N/A,TBA,T3N0M0,III,0,624,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_SG_35,Fluke-Neg,Singapore,F,59,Extrahepatic,No,N/A,N/A,Moderate,T3N1M0,IIB,1,483,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_36,Fluke-Neg,Singapore,F,59,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,0,357,No,Yes,No,No,No,Yes,N/A,N/A
+CCA_SG_37,Fluke-Neg,Singapore,F,61,Perihilar,No,N/A,N/A,Moderate,T1N1M0,IVA,1,55,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_38,Fluke-Neg,Singapore,F,46,Extrahepatic,No,N/A,N/A,Moderate to Poor,T3N1M0,IVA,N/A,233,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_39,Fluke-Neg,Singapore,M,72,Extrahepatic,No,Negative,Negative,Moderate,T3N0M0,IIIA,0,247,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_40,Fluke-Neg,Singapore,F,69,Intrahepatic,No,Negative,Negative,Moderate,T3Nx ,N/A,0,517,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_41,Fluke-Neg,Singapore,M,61,Intrahepatic,No,Positive,Negative,Well,T1Nx,N/A,0,2848,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_42,Fluke-Neg,Singapore,F,71,Perihilar,No,N/A,N/A,Well,T1N1Mx,N/A,0,463,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_43,Fluke-Neg,Singapore,F,70,Intrahepatic,No,Negative,Negative,Moderate,T3N0M0,III,1,3,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_44,Fluke-Neg,Singapore,M,69,Intrahepatic,No,Negative,N/A,Moderate,T2bNxM1,4,1,99,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_SG_45,Fluke-Neg,Singapore,M,50,Intrahepatic,No,Negative,Negative,Moderate,T2N0M0,II,0,697,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_46,Fluke-Neg,Singapore,F,69,Intrahepatic,No,Positive,Negative,Moderate,T2aN0M0,II,0,508,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_47,Fluke-Neg,Singapore,M,52,Intrahepatic,No,N/A,N/A,Moderate,T1N0Mx,I,N/A,521,No,Yes,No,No,No,No,N/A,N/A
+CCA_SG_48,Fluke-Neg,Singapore,F,77,Perihilar,No,N/A,N/A,N/A,TxN1Mx,N/A,0,74,No,No,No,No,Yes,Yes,N/A,2
+CCA_SG_49,Fluke-Neg,Singapore,M,49,Perihilar,Yes,N/A,Negative,Moderate,T2bN0M0,II,0,1989,No,No,No,No,Yes,Yes,N/A,4
+CCA_SG_50,Fluke-Neg,Singapore,M,32,Intrahepatic,No,Negative,Negative,Poor,T2bN1M1,IVB,1,341,No,No,No,No,Yes,Yes,N/A,4
+CCA_SG_51,Fluke-Neg,Singapore,M,63,Intrahepatic,No,Negative,Negative,Moderate,T2aN0M0,II,0,415,No,No,No,No,Yes,Yes,N/A,N/A
+CCA_SG_52,Fluke-Neg,Singapore,F,26,Intrahepatic,No,Negative,Negative,Moderate,T2bN0M0,II,0,348,No,No,No,No,Yes,Yes,N/A,N/A
+CCA_SG_53,Fluke-Neg,Singapore,M,47,Perihilar,No,Negative,Negative,Moderate,T3N0M0,IIA,1,288,No,No,No,No,No,Yes,N/A,N/A
+CCA_SG_54,Fluke-Neg,Singapore,F,60,Intrahepatic,No,N/A,N/A,Moderate,T3N1M1,IVB,0,232,No,No,No,No,Yes,Yes,N/A,4
+CCA_TH_1,Fluke-Pos,Thailand,F,49,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,1,167,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_2,Fluke-Pos,Thailand,M,46,Perihilar,No,N/A,N/A,Well,T3N0M0,IIIA,1,625,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_TH_3,Fluke-Pos,Thailand,F,76,Perihilar,No,N/A,N/A,Well,T3N0M0,IIIA,1,440,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_TH_4,Fluke-Pos,Thailand,M,53,Perihilar,No,N/A,N/A,Well,T3N1M1,IVB,1,30,Yes,No,No,No,Yes,Yes,N/A,N/A
+CCA_TH_5,Fluke-Pos,Thailand,M,60,Perihilar,No,N/A,N/A,Papillary carcinoma,T4N0M0,IVA,1,360,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_6,Fluke-Pos,Thailand,F,51,Intrahepatic,No,Negative,Negative,Well,T3N1M0,IVA,1,154,Yes,No,No,No,Yes,Yes,N/A,N/A
+CCA_TH_7,Fluke-Pos,Thailand,M,61,Perihilar,No,Negative,Negative,Papillary carcinoma,T3N0M0,IIIB,1,456,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_TH_8,Fluke-Pos,Thailand,F,53,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,266,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_TH_9,Fluke-Pos,Thailand,M,48,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,0,373,Yes,No,No,No,Yes,Yes,N/A,N/A
+CCA_TH_10,Fluke-Pos,Thailand,F,69,Intrahepatic,No,N/A,N/A,N/A,T3N1M0,IVA,0,1168,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_11,Fluke-Pos,Thailand,F,79,Intrahepatic,No,N/A,N/A,Well,T4N0M0,IVA,1,228,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_12,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Well,T2aN1M0,IIIB,1,307,Yes,No,No,No,Yes,Yes,N/A,N/A
+CCA_TH_13,Fluke-Pos,Thailand,M,57,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M0,IIIA,0,1027,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_14,Fluke-Pos,Thailand,F,64,Intrahepatic,No,N/A,N/A,Well,T3N0M0,III,1,117,Yes,No,No,Yes,No,Yes,N/A,1
+CCA_TH_15,Fluke-Pos,Thailand,M,37,Perihilar,No,Negative,Negative,Papillary carcinoma,T4N1M0,IIIA,1,475,Yes,No,No,Yes,Yes,Yes,2,2
+CCA_TH_16,Fluke-Pos,Thailand,F,61,Intrahepatic,No,Positive,Negative,Well,T3N0M0,III,1,149,Yes,No,No,Yes,Yes,No,N/A,N/A
+CCA_TH_17,Fluke-Pos,Thailand,M,66,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,64,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_18,Fluke-Pos,Thailand,M,56,Intrahepatic,No,N/A,N/A,Well,T4N1M0,IVA,1,157,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_19,Fluke-Pos,Thailand,F,65,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N0M0,III,1,177,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_20,Fluke-Pos,Thailand,M,63,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T4N1M0,IVA,1,557,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_21,Fluke-Pos,Thailand,F,40,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T1N0M0,I,0,2255,Yes,No,No,Yes,Yes,No,2,2
+CCA_TH_22,Fluke-Pos,Thailand,F,56,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T2N0M0,II,0,2099,Yes,No,No,Yes,Yes,Yes,1,1
+CCA_TH_23,Fluke-Pos,Thailand,F,56,Perihilar,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,1,1760,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_TH_24,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Well,T3N1M0,IIIB,1,862,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_25,Fluke-Pos,Thailand,M,53,Perihilar,No,N/A,N/A,Papillary carcinoma,T2bN0M0,II,1,935,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_26,Fluke-Pos,Thailand,F,52,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,1,523,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_27,Fluke-Pos,Thailand,F,72,Intrahepatic,No,Negative,Negative,Poor,T3N1M0,IVA,1,1119,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_TH_28,Fluke-Pos,Thailand,F,52,Intrahepatic,No,Negative,Negative,Well,T3N1M0,IVA,1,945,No,Yes,No,Yes,Yes,Yes,3,3
+CCA_TH_29,Fluke-Pos,Thailand,M,49,Perihilar,No,N/A,N/A,Well,T3N1M1,IVB,1,71,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_30,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Well,T2bN1M0,IIIB,1,540,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_31,Fluke-Pos,Thailand,M,55,Intrahepatic,No,Negative,Negative,Well,T4N0M0,IVA,1,154,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_32,Fluke-Pos,Thailand,M,50,Perihilar,No,N/A,N/A,Papillary carcinoma,T2bN1M0,IIIB,1,377,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_33,Fluke-Pos,Thailand,M,53,Intrahepatic,No,Negative,Negative,Well,T3N1M0,IVA,1,592,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_34,Fluke-Pos,Thailand,M,54,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,302,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_35,Fluke-Pos,Thailand,M,76,Perihilar,No,N/A,N/A,Papillary carcinoma,T4N1M1,IVB,1,3,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_36,Fluke-Pos,Thailand,F,63,Perihilar,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,1,402,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_37,Fluke-Pos,Thailand,F,51,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T3N0M0,III,1,358,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_38,Fluke-Pos,Thailand,F,53,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T3N1M0,IVA,1,156,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_39,Fluke-Pos,Thailand,M,57,Intrahepatic,No,N/A,N/A,Papillary carcinoma,TisN0M0,0,0,1790,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_40,Fluke-Pos,Thailand,M,61,Intrahepatic,No,Positive,Negative,Papillary carcinoma,T3N1M0,IVA,1,252,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_41,Fluke-Pos,Thailand,M,61,Perihilar,No,N/A,N/A,Well,T3N1M1,IVB,1,369,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_42,Fluke-Pos,Thailand,F,58,Perihilar,No,Negative,Negative,Papillary carcinoma,T1N0M0,I,0,1758,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_43,Fluke-Pos,Thailand,F,38,Intrahepatic,No,N/A,N/A,Well,T2bN1M0,IVA,1,559,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_44,Fluke-Pos,Thailand,M,64,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M1,IVB,1,256,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_45,Fluke-Pos,Thailand,M,55,Perihilar,No,Negative,Negative,Papillary carcinoma,T3N0M0,IIIA,1,237,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_46,Fluke-Pos,Thailand,M,68,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M0,IVA,1,731,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_47,Fluke-Pos,Thailand,M,66,Perihilar,No,N/A,N/A,Papillary carcinoma,TisN0m0,0,0,1714,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_48,Fluke-Pos,Thailand,M,67,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M0,IVA,1,1317,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_49,Fluke-Pos,Thailand,M,50,Perihilar,No,N/A,N/A,Well,T3N1M1,IVB,1,127,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_50,Fluke-Pos,Thailand,M,60,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M0,IIIA,0,1681,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_51,Fluke-Pos,Thailand,M,53,Perihilar,No,N/A,N/A,Well,T3N0M0,IIIA,1,573,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_52,Fluke-Pos,Thailand,M,57,Perihilar,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,1,447,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_53,Fluke-Pos,Thailand,M,53,Intrahepatic,No,Positive,Negative,Moderate,T3N0M0,III,1,237,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_54,Fluke-Pos,Thailand,M,58,Intrahepatic,No,N/A,N/A,Papillary carcinoma,TisN0M0,0,0,1581,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_55,Fluke-Pos,Thailand,M,73,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,82,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_56,Fluke-Pos,Thailand,M,56,Intrahepatic,No,Negative,Negative,Well,T2bN0M0,II,1,785,No,Yes,No,No,Yes,No,N/A,N/A
+CCA_TH_57,Fluke-Pos,Thailand,M,63,Perihilar,No,N/A,N/A,Well,T3N1M1,IVB,1,111,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_58,Fluke-Pos,Thailand,M,63,Perihilar,No,Negative,Negative,Well,T3N0M0,IIIA,0,1366,No,Yes,No,Yes,No,Yes,N/A,2
+CCA_TH_59,Fluke-Pos,Thailand,M,47,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N0M0,III,1,384,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_60,Fluke-Pos,Thailand,M,50,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,0,1303,No,Yes,No,Yes,No,No,N/A,N/A
+CCA_TH_61,Fluke-Pos,Thailand,M,60,Intrahepatic,No,N/A,N/A,Papillary carcinoma,TisN0M0,0,0,1280,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_62,Fluke-Pos,Thailand,M,64,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N1M0,IIIB,1,752,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_63,Fluke-Pos,Thailand,M,44,Intrahepatic,No,N/A,N/A,Moderate,T2aN1M0,IVA,1,167,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_64,Fluke-Pos,Thailand,F,60,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M1,IVB,1,393,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_65,Fluke-Pos,Thailand,M,42,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M0,IVA,1,278,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_66,Fluke-Pos,Thailand,M,62,Intrahepatic,No,N/A,N/A,Well,T3N0M0,III,1,728,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_67,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Poor,T3N1M1,IVB,1,61,No,Yes,No,Yes,No,Yes,N/A,4
+CCA_TH_68,Fluke-Pos,Thailand,M,56,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M1,IVB,1,351,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_69,Fluke-Pos,Thailand,F,48,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T2bN0M0,II,0,1111,No,Yes,No,Yes,Yes,Yes,4,4
+CCA_TH_70,Fluke-Pos,Thailand,F,49,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M0,IVA,1,115,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_71,Fluke-Pos,Thailand,M,59,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,219,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_72,Fluke-Pos,Thailand,M,66,Perihilar,No,N/A,N/A,Well,T2aN0M0,II,0,1091,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_73,Fluke-Pos,Thailand,F,75,Perihilar,No,N/A,N/A,Papillary carcinoma,T2bN1M0,IIIB,1,100,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_74,Fluke-Pos,Thailand,F,43,Intrahepatic,No,N/A,N/A,Well,T3N1M1,IVB,1,79,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_75,Fluke-Pos,Thailand,M,52,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N0M0,III,0,1037,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_TH_76,Fluke-Pos,Thailand,M,73,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,1,542,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_77,Fluke-Pos,Thailand,M,59,Intrahepatic,No,N/A,N/A,Moderate,T3N1M0,IVA,1,212,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_78,Fluke-Pos,Thailand,F,60,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,488,No,Yes,No,Yes,No,Yes,N/A,1
+CCA_TH_79,Fluke-Pos,Thailand,M,64,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,505,No,Yes,No,Yes,Yes,Yes,2,2
+CCA_TH_80,Fluke-Pos,Thailand,F,56,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N1M0,IIIB,1,186,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_81,Fluke-Pos,Thailand,M,49,Perihilar,No,N/A,N/A,Well,T4N0M1,IVB,1,577,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_82,Fluke-Pos,Thailand,F,71,Perihilar,No,N/A,N/A,Well,T2bN0M0,II,1,302,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_83,Fluke-Pos,Thailand,F,61,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M0,IIIA,1,379,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_84,Fluke-Pos,Thailand,M,50,Perihilar,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,1,523,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_85,Fluke-Pos,Thailand,F,52,Intrahepatic,No,N/A,N/A,Well,T2aN0M0,II,0,916,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_86,Fluke-Pos,Thailand,M,70,Perihilar,No,N/A,N/A,Well,T2bN0M0,II,0,904,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_87,Fluke-Pos,Thailand,M,67,Perihilar,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,0,903,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_88,Fluke-Pos,Thailand,M,64,Intrahepatic,No,N/A,N/A,Adenosquamous carcinoma,T3N0M0,III,1,457,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_89,Fluke-Pos,Thailand,F,66,Intrahepatic,No,N/A,N/A,Moderate,T3N1M0,IVA,1,109,No,Yes,No,Yes,Yes,No,N/A,N/A
+CCA_TH_90,Fluke-Pos,Thailand,M,56,Perihilar,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,0,863,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_91,Fluke-Pos,Thailand,M,55,Intrahepatic,No,N/A,N/A,Well,T2aN0M0,II,0,852,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_92,Fluke-Pos,Thailand,M,62,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N0M0,III,1,381,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_93,Fluke-Pos,Thailand,F,64,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,105,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_94,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Well,T2aN1M0,IIIB,0,804,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_95,Fluke-Pos,Thailand,M,65,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,299,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_96,Fluke-Pos,Thailand,F,44,Perihilar,No,N/A,N/A,Well,T4N1M0,IVA,1,264,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_97,Fluke-Pos,Thailand,F,65,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M0,IIIA,0,756,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_98,Fluke-Pos,Thailand,F,45,Perihilar,No,N/A,N/A,Well,T4N1M0,IVA,1,78,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_99,Fluke-Pos,Thailand,M,63,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T2aN0M0,II,1,315,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_100,Fluke-Pos,Thailand,M,54,Perihilar,No,N/A,N/A,Papillary carcinoma,T2bN1M0,IVB,0,714,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_101,Fluke-Pos,Thailand,M,70,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N0M0,III,1,297,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_102,Fluke-Pos,Thailand,M,66,Intrahepatic,No,N/A,N/A,Adenosquamous carcinoma,T3N1M0,IVA,1,50,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_103,Fluke-Pos,Thailand,F,60,Intrahepatic,No,N/A,N/A,Adenosquamous carcinoma,T3N0M0,III,1,83,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_104,Fluke-Pos,Thailand,F,57,Perihilar,No,N/A,N/A,Papillary carcinoma,T3N0M1,IVB,1,34,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_105,Fluke-Pos,Thailand,M,51,Intrahepatic,No,N/A,N/A,Adenosquamous carcinoma,T3N0M0,III,1,187,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_106,Fluke-Pos,Thailand,M,64,Perihilar,No,N/A,N/A,Well,T2bN1M0,IIIB,1,149,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_107,Fluke-Pos,Thailand,F,61,Perihilar,No,N/A,N/A,Papillary carcinoma,T2aN1M0,IIIB,0,435,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_108,Fluke-Pos,Thailand,M,70,Intrahepatic,No,N/A,N/A,Moderate,T3N1M0,IVA,0,393,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_109,Fluke-Pos,Thailand,F,60,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T3N1M0,IVA,1,346,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_110,Fluke-Pos,Thailand,F,53,Intrahepatic,No,N/A,N/A,Well,T3N0M0,III,1,321,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_111,Fluke-Pos,Thailand,M,65,Perihilar,No,N/A,N/A,Papillary carcinoma,T2bN1M0,IIIB,1,72,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_112,Fluke-Pos,Thailand,M,68,Intrahepatic,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,0,218,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_113,Fluke-Pos,Thailand,F,42,Perihilar,No,N/A,N/A,Papillary carcinoma,T1N0M0,I,0,151,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_114,Fluke-Pos,Thailand,F,49,Perihilar,No,N/A,N/A,Well,T2bN1M0,IIIB,1,251,No,Yes,No,No,Yes,Yes,N/A,N/A
+CCA_TH_115,Fluke-Pos,Thailand,M,50,Intrahepatic,No,N/A,N/A,Well,T3N0M0,III,1,222,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_116,Fluke-Pos,Thailand,M,52,Intrahepatic,No,Negative,Negative,Moderate,T4N0M0,IVA,1,2253,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_117,Fluke-Pos,Thailand,M,42,Perihilar,No,Negative,Negative,Well,T3N0M0,IIIA,1,351,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_118,Fluke-Pos,Thailand,M,46,Perihilar,No,Negative,Negative,Papillary carcinoma,T3N0M0,IIIA,1,2493,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_119,Fluke-Pos,Thailand,F,66,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T2N1M0,IVA,1,148,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_120,Fluke-Pos,Thailand,F,45,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T3N1M0,IVA,1,1868,No,Yes,No,Yes,No,Yes,N/A,2
+CCA_TH_121,Fluke-Pos,Thailand,M,70,Intrahepatic,No,Negative,Negative,Well,T4NXM0,IVA,1,210,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_122,Fluke-Pos,Thailand,M,50,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T3N1M0,IVA,1,180,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_123,Fluke-Pos,Thailand,M,62,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T4N0M0,IVA,1,1302,No,Yes,No,No,No,Yes,N/A,N/A
+CCA_TH_124,Fluke-Pos,Thailand,M,69,Intrahepatic,No,Negative,Negative,Papillary carcinoma,T3N1M0,IVA,1,429,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_125,Fluke-Pos,Thailand,F,51,Intrahepatic,No,Negative,Negative,Well,T4N1M0,IVA,1,157,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_126,Fluke-Pos,Thailand,F,64,Intrahepatic,No,Negative,Negative,Well,T3N0M0,III,1,754,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_127,Fluke-Pos,Thailand,F,51,Perihilar,No,Negative,Negative,Well,T4N0M0,IVA,1,609,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_128,Fluke-Pos,Thailand,M,55,Perihilar,No,Negative,Negative,Well,T4N0M0,IVA,1,340,No,Yes,No,Yes,Yes,Yes,1,1
+CCA_TH_129,Fluke-Pos,Thailand,M,69,Intrahepatic,No,Negative,Negative,Well,T4N1M0,IVA,1,876,No,Yes,No,No,No,No,N/A,N/A
+CCA_TH_130,Fluke-Pos,Thailand,M,51,Perihilar,No,N/A,N/A,Papillary carcinoma,N/A,N/A,N/A,N/A,No,No,No,No,Yes,Yes,N/A,1
+CCA_TH_131,Fluke-Pos,Thailand,M,52,Perihilar,No,N/A,N/A,Well,T3N1M0,IIIB,1,307,No,No,No,No,No,Yes,N/A,N/A
+CCA_TH_132,Fluke-Pos,Thailand,M,57,Intrahepatic,No,N/A,N/A,Well,T3N1M0,IVA,1,416,No,No,No,No,No,Yes,N/A,N/A
+CCA_TW_1,Fluke-Neg,Taiwan,M,53,Intrahepatic,N/A,Positive,Negative,N/A,N/A,I,N/A,1620,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_2,Fluke-Neg,Taiwan,M,50,Intrahepatic,N/A,Positive,Negative,N/A,N/A,I,N/A,1556,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_3,Fluke-Neg,Taiwan,F,55,Intrahepatic,N/A,Negative,Negative,N/A,N/A,IVA,N/A,284,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_4,Fluke-Neg,Taiwan,M,48,Intrahepatic,N/A,Negative,Negative,N/A,N/A,III,N/A,2430,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_5,Fluke-Neg,Taiwan,M,48,Intrahepatic,N/A,Negative,Negative,N/A,N/A,II,N/A,675,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_6,Fluke-Neg,Taiwan,M,35,N/A,N/A,Positive,Negative,Poor,N/A,I,N/A,1140,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_7,Fluke-Neg,Taiwan,M,68,Intrahepatic,N/A,Negative,Negative,Poor,N/A,I,N/A,1064,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_8,Fluke-Neg,Taiwan,F,74,N/A,N/A,Negative,Negative,Moderate,N/A,IIA,N/A,342,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_9,Fluke-Neg,Taiwan,F,77,N/A,N/A,Positive,Negative,Moderate,N/A,N/A,N/A,631,No,No,No,Yes,No,No,N/A,N/A
+CCA_TW_10,Fluke-Neg,Taiwan,F,66,N/A,N/A,Negative,Negative,Moderate,N/A,N/A,N/A,990,No,No,No,Yes,No,No,N/A,N/A
+,,,,,,,,,,,,,,,,,,,,,
+N/A indicates data is not available,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
