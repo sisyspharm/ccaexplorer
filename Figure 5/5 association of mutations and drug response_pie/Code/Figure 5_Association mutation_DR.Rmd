@@ -1,0 +1,447 @@
+---
+title: "Figure 5 Association between mutation and DR"
+author: "SJ"
+output: html_documentrm(list = ls())
+
+
+#Volcano
+```{r}
+
+rm(list = ls())
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+
+setwd("")
+DF <- read.csv(OncoRank.csv")
+#combine KKu156 KKU213 KKU214
+Combine156213214<- unite(DF,KKU156,KKU213,KKU214,col="KKU213",sep="",remove = TRUE)
+DF2<- Combine156213214 %>%
+  group_by(X) %>%
+  gather("cellline","status",2:14)
+#returen character of cellline to factor
+DF2$cellline <- as.factor(DF2$cellline)
+#Add mutation status 0 1 to new column 
+DF3A<- DF2 %>%
+  mutate(status2=status)
+#place 1 with mutant
+DF3A$status2[DF3A$status!=0]<-"mutant"
+#place 0 with non-mutant
+DF3A$status2[DF3A$status==0]<-"wt"
+#place wt for 000 no alteration in 3 cell line
+DF3A$status2[DF3A$status=="000"]<-"wt"
+
+#Add column 1 0
+DF3B<- DF3A %>%
+  mutate(status3=status)
+#place 1 with mutant
+DF3B$status3[DF3B$status3!=0]<-"1"
+#place 0 with mutant
+DF3B$status3[DF3B$status3==0]<- "0"
+
+#convert X from char to numeric
+DF3B$status3 <- as.numeric(DF3B$status3 )
+#DF3B$status3[DF3B$status3 == 0] <- return(NULL)
+
+#sort by gene
+DF4<-arrange(DF3B,X) %>%
+  mutate(subtype=cellline)
+
+DF5 <-DF4 %>% mutate(subtype=recode(subtype, HuCCA1="S1",HuCCT1="S2",HUH28="S2",
+                                    KKKD068="S2",KKKD131="S2",KKKD138="S1",
+                                    KKU055="S2",KKU100="S2",KKU213="S1",
+                                    RBE="S1",SSP25="S2",TFK1="S2",YSCCC="S2"))
+#change subtype colum from factor to character
+DF5$subtype <- as.character(DF5$subtype)
+#Import DR table use cell line name to match, change any spread column  to character
+
+DR <- read.csv("Allparameter_CCA screening_100Drug.csv"
+               ,stringsAsFactors = FALSE)
+#mergedata 
+mergeDF <- inner_join(DF5, DR, by = "cellline",all=TRUE)
+cellline<- c("HuCCA1","HuCCT1","HUH28",
+                                    "KKKD068","KKKD131","KKKD138",
+                                    "KKU055","KKU100","KKU213",
+                                   "RBE","SSP25","TFK1","YSCCC") 
+mergeDF2 <- mergeDF[mergeDF$cellline%in% cellline ,]
+#filter  sd=0 out 
+#85 agent X 189 gene
+zscore <- mergeDF %>%  
+  mutate(log10GR50=log10(GR50)) %>%
+  mutate(GR50=GR50)  %>%
+  select(X,agent,GR50,log10GR50,subtype,status2,cellline,status3)%>%
+  group_by_(.dots=c("X","agent")) %>%
+  mutate(mean_gene_drug=mean(log10GR50)) %>%
+  mutate(subtractmean=(log10GR50 - mean(log10GR50)) )%>%
+  mutate( sd(log10GR50)) %>%
+  mutate(z_score_group = (log10GR50 - mean(log10GR50)) / sd(log10GR50)) %>%   
+  filter(sd(log10GR50)>0) 
+ungroup
+
+#85 agent X 189 gene_spreadd zscore
+zscore0<- zscore%>%
+  #mutate(key=paste("z_Score")) %>%
+  select(status2,agent,z_score_group,X) %>% 
+  group_by(X,status2,agent) %>%
+  summarise(z_score_group = list(z_score_group)) %>%
+  group_by(status2,X,agent)  %>%
+  spread(status2,z_score_group) %>%
+  rename(zscore_wt=wt) %>%
+  rename(zscore_mutant=mutant) %>%
+  mutate(l_zmutant = length(unlist(zscore_mutant)), l_zwt= length(unlist(zscore_wt))) %>%
+  unite_( "gene_agent", c("X","agent")) 
+
+#85 agent X 189 gene_spread log10GR50 of wt vs mutant
+zscore1<-zscore%>%
+  select(status2,X,log10GR50,agent) %>% 
+  group_by(status2,X,agent) %>%
+  summarise(log10GR50 = list(log10GR50)) %>%
+  group_by(status2,X,agent)  %>%
+  spread(status2,log10GR50) %>%
+  mutate(l_mutant = length(unlist(mutant)), l_wt= length(unlist(wt))) %>%
+  unite_( "gene_agent", c("X","agent")) 
+
+##seperate 1 or 0 into S1 and S2 column 
+zscore1.1 <- zscore %>%  unite("subtype_mutation",c("subtype","status2")) %>%
+  select(subtype_mutation,X,status3, cellline,agent)  %>%
+  group_by(subtype_mutation, X,agent) %>% distinct() %>% 
+  summarise(list_mutant = list((status3)), l = (length(status3))) %>%
+  group_by() %>% mutate(X = as.character(X)) %>%
+  select(subtype_mutation, X, l,agent) %>% 
+  spread(key = subtype_mutation, value = l) %>% 
+  replace(.,is.na(.),0) %>%
+unite_( "gene_agent", c("X","agent"))
+
+#Add log10GR50 column to list for plot in ggplot
+zscore1.2<-zscore%>%
+    select(status2,X,log10GR50,agent) %>% 
+  group_by(X,agent) %>%
+  summarise(log10GR50 = list(log10GR50)) %>%
+  group_by(X,agent)  %>%
+ # mutate(GR50All=  list(log10GR50)) %>%
+  unite_( "gene_agent", c("X","agent")) 
+
+#turn celline to list to list for plot in ggplot
+zscore1.3<-zscore%>%
+    select(status2,X,log10GR50,agent,cellline) %>% 
+    group_by(X,agent) %>%
+    summarise(cellline = list(cellline)) %>%
+    group_by(X,agent)  %>%
+    # mutate(GR50All=  list(log10GR50)) %>%
+    unite_( "gene_agent", c("X","agent")) 
+
+#85 agent X 189 gene_spread Q1Q3 
+zscore2<- zscore %>%
+  select(X,agent,log10GR50,status2,z_score_group) %>% 
+  group_by(X,agent) %>%
+  filter((log10GR50 >= quantile(log10GR50,0.25))& (log10GR50 <= quantile(log10GR50,0.75)) )%>%
+  group_by(X,agent) %>%
+  summarise(Q3Q1_log10GR50 = list(log10GR50)) %>%
+  mutate(l_Q3Q1_log10GR50 = lengths(Q3Q1_log10GR50)) %>%
+  unite_( "gene_agent", c("X","agent"))
+
+#combine column
+zscore3<- inner_join(zscore0,zscore1, by = "gene_agent",all=TRUE)
+zscore4<- inner_join(zscore2,zscore3, by = "gene_agent",all=TRUE)
+zscore4.2<- inner_join(zscore1.2,zscore4, by = "gene_agent",all=TRUE)
+#Add this
+zscore4.3<- inner_join(zscore1.3,zscore4.2, by = "gene_agent",all=TRUE)
+#add S1 S2 mutant
+zscore4.4<- inner_join(zscore1.1,zscore4.3, by = "gene_agent",all=TRUE)
+
+zscore5<- zscore4.4%>%
+    separate(gene_agent, into=c("gene","agent"),sep="_")
+zscore5$gene <- as.factor(zscore5$gene)
+
+#calculate and test stat p. val=mutant vs IQR, p.val2=mutant vs wt
+
+zscore5<- zscore5 %>%filter(l_mutant>2,l_wt>2) %>%
+    group_by(gene,agent)%>%
+    mutate( median_logGR_mutant = median(unlist(mutant)),
+            median_logGR_wt = median(unlist(wt)),
+            median_logGR_AllQ3Q1 = median(unlist(Q3Q1_log10GR50)),
+            median_logGRZscore_mutant = median(unlist(zscore_mutant)),
+            median_logGRZscore_wt = median(unlist(zscore_wt)),
+            mean_logGR_mutant = mean(unlist(mutant)),
+            mean_logGR_wt = mean(unlist(wt)),
+            mean_logGR_AllQ3Q1 = mean(unlist(Q3Q1_log10GR50)),
+            mean_logGRZscore_mutant = mean(unlist(zscore_mutant)),
+            mean_logGRZscore_wt = mean(unlist(zscore_wt)),
+            median_logGRZscore_mutant = median(unlist(zscore_mutant)),
+            AverageDifference_Mutant.WT = mean_logGR_mutant -  mean_logGR_wt,
+            MedianDifference_Mutant.WT = median_logGR_mutant - median_logGR_wt,
+            AverageDifference_Mutant.Q1Q3 = mean_logGR_mutant -   mean_logGR_AllQ3Q1,
+            MedianDifference_Mutant.Q1Q3 = median_logGR_mutant - median_logGR_AllQ3Q1,
+            AverageDifference_Mutant.WTZ =  mean_logGRZscore_mutant-  mean_logGRZscore_wt ,
+            MedianDifference_Mutant.WTZ = median_logGRZscore_mutant  - median_logGRZscore_wt,
+            Log10Foldchange=mean_logGR_mutant/mean_logGR_wt) %>%
+    group_by(gene,agent)%>%
+    mutate( p.val = wilcox.test(unlist(mutant),unlist(Q3Q1_log10GR50))$p.value,
+            fdr = p.adjust(p.val,method = "BH",n = length(unique(zscore5$gene))*length(unique(zscore5$agent))))   %>%
+    mutate( p.val2 = wilcox.test(unlist(mutant),unlist(wt))$p.value,
+                        fdr = p.adjust(p.val,method = "BH",n = length(unique(zscore5$gene))*length(unique(zscore5$agent))))
+zscore5<- zscore5%>%
+  mutate(sig=ifelse(p.val2<0.05, "Mutation-associated drug sensitive_p.val<0.05", "no association"))
+zscore5<- zscore5%>%mutate(sig=zscore5$sig[zscore5$p.val<0.01]<-"no association")
+zscore5$sig[zscore5$ median_logGRZscore_mutant <(-0.5) &zscore5$p.val<0.05 ]<-"Mutation-associated drug sensitive_p.val<0.05"
+zscore5$sig[zscore5$median_logGRZscore_mutant >0.5 &zscore5$p.val<0.05 ]<-"Mutation-associated drug resistance_p.val<0.05"
+
+library (ggrepel)
+#Plot all gene and merge column gene and agent for plot
+zscore6 <- zscore5 %>%unite_( "gene_agent", c("gene","agent"))
+zscore6$sig[zscore6$gene_agent ==c( "KRAS_Gefitinib")]<-"Known Mutation-associated drug resistance "
+zscore6$sig[zscore6$gene_agent ==c( "KRAS_PD0325901")]<-"Known Mutation-associated drug sensitive "
+zscore6$sig[zscore6$gene_agent ==c("KRAS_Selumetinib")]<-"Known Mutation-associated drug sensitive "
+reported<- c("KRAS_Gefitinib") 
+reported2<- c("KRAS_PD0325901") 
+reported3<- c("KRAS_Selumetinib") 
+
+
+#Plot volcano change y axis if want mutant vs IQR use p.val , if want mutant vs wt use p.val2
+zzz <- ggplot(zscore6, aes(median_logGRZscore_mutant,-log10(p.val)))+
+  # annotate("rect", xmin=-Inf, xmax=0, ymin=-Inf, ymax=Inf, alpha=0.3, fill="#00ffff")+
+  scale_color_manual(values=c("blue","magenta", "green","red","grey50")) + 
+  geom_point(aes(colour = factor(zscore6$sig),size = zscore6$l_mutant, alpha = 0.1))+
+  geom_text_repel(data=dplyr::filter(zscore6,p.val<0.05& abs(median_logGRZscore_mutant) >0.5),aes(label=gene_agent))+
+  geom_text_repel(data=dplyr::filter(zscore6,gene_agent==reported),aes(label=gene_agent))+
+  geom_text_repel(data=dplyr::filter(zscore6,gene_agent==reported2),aes(label=gene_agent))+
+  geom_text_repel(data=dplyr::filter(zscore6,gene_agent==reported3),aes(label=gene_agent))+
+  #  annotate("rect", xmin=0, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.3, fill="#FFA500")+
+  geom_vline(xintercept = 0, linetype="dotted", color = "grey", size=1.0)+
+  scale_size_continuous(name = "Number of mutated cell line", breaks = c(2,4,6,8,10))+
+  theme_bw()+guides(alpha=FALSE)+
+  labs(color="Significant status",title="Association between genetic alterations and drug response")+
+  xlim(-3,3)+labs(x="median_logGRZscore_mutant")
+zzz 
+zzz + theme(plot.title = element_text(color="black", size=20, face="bold",hjust = (0.5)),
+            axis.title.x = element_text(color="black", size=15, face="bold"),
+            axis.title.y = element_text(color="black", size=15, face="bold"),
+            legend.title=element_text(size=14),
+            legend.text=element_text(size=10))
+
+
+```
+
+```{r}
+#Add filter of p.val  for plot scatter boxplot
+zscore5filtergg<- zscore5%>% filter(p.val <0.05)
+#unlist and gather
+zscore5filtergg_f <-unnest(zscore5filtergg, log10GR50,cellline)
+#bind table zscore and zscore5filtergg_f using X angent status2, key=log10GR50
+zscoreCB<-zscore%>%select(status2,X,log10GR50,agent,subtype,cellline)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+##plot boxplot of individual drug and gene
+#rename column
+colnames(zscore)[colnames(zscore)=="X"] <- "gene"
+#join 2 table (log10GR50, p.val status2 subtype)
+try2<-full_join(x=zscore,y=zscore5filtergg_f)
+try3<-try2 %>% filter(p.val<0.05)%>% mutate (percentage_S1M=(100*S1_mutant)/(l_mutant),
+            percentage_S2M=(100*S2_mutant)/(l_mutant))
+
+try4<- dplyr::filter(try3, grepl('Mutation-associated drug resistance_p.val<0.05|Mutation-associated drug sensitive_p.val<0.05', sig))
+try5<- dplyr::filter(try3, grepl('Mutation-associated drug sensitive_p.val<0.05', sig)) # filter for sensitive
+try6<- dplyr::filter(try3, grepl('Mutation-associated drug resistance_p.val<0.05', sig)) #filter for resistance
+
+v <- ifelse( try3$sig %in% c( "Mutation-associated drug sensitive_p.val<0.05" ), "red", "green" )
+v2 <- ifelse( try3$sig %in% c( "Mutation-associated drug sensitive_p.val<0.05" ), "Mutation-associated drug sensitive_p.val<0.05", "Mutation-associated drug resistance_p.val<0.05" )
+
+#median center of wt sensitive
+try5Norm<-try5%>% mutate(NormMedGR50=log10GR50-median_logGR_wt)
+#Plot boxplot
+g<- ggplot(try5Norm, aes(x=reorder(agent,log10GR50,FUN=median),y=NormMedGR50,fill=status2))+geom_boxplot(width=1,alpha=0.9)+  facet_wrap(gene ~sig, scale="free_x",nrow=3)+theme_minimal() +theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+scale_fill_manual(name = "Alteration",values = c('yellow','blue'))+labs(x="")+ theme(panel.background = element_rect(colour = 'red', size = 3, linetype='solid'))+theme(legend.position = "bottom")
+g
+
+#plot only LRP1B and KRAS
+Final_sensitive<- try5Norm%>%filter(gene=="LRP1B")
+#Final_sensitive<- try5Norm%>%filter(gene%in% c("LRP1B", "KRAS"))
+
+#Plot boxplot
+g<- ggplot(Final_sensitive, aes(x=reorder(agent,log10GR50,FUN=median),y=NormMedGR50,fill=status2))+geom_boxplot(width=1,alpha=0.9)+  facet_wrap(gene ~sig, scale="free_x",nrow=3)+theme_minimal() +theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+scale_fill_manual(name = "Alteration",values = c('yellow','blue'))+labs(x="")+ theme(panel.background = element_rect(colour = 'red', size = 3, linetype='solid'))+theme(legend.position = "bottom")
+g
+
+
+#median center of wt resistance
+try6Norm<-try6%>% mutate(NormMedGR50=log10GR50-median_logGR_wt)
+#plot boxplot
+g<- ggplot(try6Norm, aes(x=reorder(agent,log10GR50,FUN=median),y=NormMedGR50,fill=status2))+geom_boxplot(width=1,alpha=0.9)+  facet_wrap(gene ~sig, scale="free_x",nrow=2)+theme_minimal() +theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+scale_fill_manual(name = "Alteration",values = c('yellow','blue'))+labs(x="")+ theme(panel.background = element_rect(colour = 'green', size = 3, linetype='solid'))+theme(legend.position = "bottom")
+g
+
+
+try6Norm<-try6%>% mutate(NormMedGR50=log10GR50-median_logGR_wt)
+#plot only LRP1B BLM PTEN
+Final_resistant<- try6Norm%>%filter(gene=="LRP1B")
+#Final_sensitive<- try5Norm%>%filter(gene%in% c("LRP1B", "KRAS"))
+
+#plot boxplot
+g<- ggplot(Final_resistant, aes(x=reorder(agent,log10GR50,FUN=median),y=NormMedGR50,fill=status2))+geom_boxplot(width=1,alpha=0.9)+  facet_wrap(gene ~sig, scale="free_x",nrow=2)+theme_minimal() +theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+scale_fill_manual(name = "Alteration",values = c('yellow','blue'))+labs(x="")+ theme(panel.background = element_rect(colour = 'green', size = 3, linetype='solid'))+theme(legend.position = "bottom")
+g
+
+
+
+```
+
+
+plot heatmap
+```{r}
+
+#find correlation coloumn 
+which( colnames(try5Norm)=="Log10Foldchange" )
+
+heatplot1<-try5Norm%>% ungroup(S1_mutant)%>%select (gene,agent,AverageDifference_Mutant.WT,sig)
+heatplot2<-try6Norm%>% ungroup(S1_mutant)%>%select (gene,agent,AverageDifference_Mutant.WT,sig)
+joinheatplot<-full_join(heatplot1,heatplot2)
+
+#plotboth
+ggplot(joinheatplot, aes(x=reorder(gene,AverageDifference_Mutant.WT,min),y=reorder(agent,AverageDifference_Mutant.WT,min) )) +geom_tile(aes(fill =AverageDifference_Mutant.WT), color = "white")+scale_fill_gradient2(low = "red", high = "green", mid = "grey",midpoint = 0) +theme_classic()+facet_wrap(~sig,scales = "free")+theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+labs(x="gene")+labs(x="genes")+labs(y="Drugs")
+
+#plot mutation assoiate sensitivity 5*6 inch
+ggplot(heatplot1, aes(x=reorder(gene,AverageDifference_Mutant.WT,min),y=reorder(agent,AverageDifference_Mutant.WT,min) )) +geom_tile(aes(fill =AverageDifference_Mutant.WT), color = "white")+scale_fill_gradient2(low = "red", high = "green", mid = "grey",midpoint = 0) +theme_classic()+facet_wrap(~sig,scales = "free")+theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+labs(x="gene")+labs(x="genes")+labs(y="Drugs")+theme(legend.position = "bottom")
+ 
+
+#plot mutation associate resistance 5*6 inch
+ggplot(heatplot2, aes(x=reorder(gene,AverageDifference_Mutant.WT,max),y=reorder(agent,AverageDifference_Mutant.WT,max) )) +geom_tile(aes(fill =AverageDifference_Mutant.WT), color = "white")+scale_fill_gradient2(low = "red", high = "green", mid = "grey",midpoint = 0) +theme_classic()+facet_wrap(~sig,scales = "free")+theme(axis.text.x = element_text(angle=90,colour="black",size = rel(0.8)))+labs(x="gene")+labs(x="genes")+labs(y="Drugs")+theme(legend.position = "bottom")
+
+```
+
+```{r}
+Plot bar plot S1
+```{r}
+#try5Bar<-try5%>%select(gene,agent,S1_mutant,S2_mutant,p.val,sig,subtype,percentage_S1M,percentage_S2M)%>%gather(key=subgroup,value=count,-gene,-agent,-p.val,-sig,-subtype,-percentage_S1M,-percentage_S2M)
+
+#Add percentage of mutant count in each subgroup
+#try5Bar2<-try5Bar%>%select(gene,agent,p.val,sig,subtype,percentage_S1M,percentage_S2M,subgroup,count)%>%gather(key=subgroup_percentage,value=percentage,-gene,-agent,-p.val,-sig,-subtype,-subgroup,-count)
+
+#try5Barslice2<-try5Bar2%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))
+
+
+#FOR mutant associate drug sensitive 
+
+#Add category of subtype and mutant using list from significant mutant associate drug sensitive 
+try5BarT1<-try5%>%select(gene,agent,S1_mutant,S2_mutant,p.val,sig,subtype)%>%gather(key=subgroup,value=count,-gene,-agent,-p.val,-sig,-subtype)
+
+#Add percentage of mutant count in each subgroup
+try5BarT2<-try5%>%ungroup(S1_mutant)%>%select(gene,agent,p.val,sig,subtype,percentage_S1M,percentage_S2M)%>%gather(key=subgroup_percentage,value=percentage,-gene,-agent,-p.val,-sig,-subtype)
+
+#Slice duplicate
+try5Barslice1<-try5BarT1%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))
+try5Barslice2<-try5BarT2%>% group_by(gene,agent,subgroup_percentage) %>% slice(which.min(percentage))
+
+#join table key gene, agent,
+join<- full_join(try5Barslice1,try5Barslice2)
+
+#handle with replicate
+#unite subgroup and subgroup_percentage 
+#filter only S1_mutant.percentage_S1M and S2_mutant.percentage_S2M
+
+join_delrep_S<- unite_(join, "subgroup_subgroup_percentage", c("subgroup","subgroup_percentage"),sep = '/')
+join_delrep1<- dplyr::filter(join_delrep_S, grepl('S1_mutant/percentage_S1M|S2_mutant/percentage_S2M',subgroup_subgroup_percentage))
+
+join_delrep2<-join_delrep1%>%separate(subgroup_subgroup_percentage, into=c("subgroup","subgroup_percentage"),sep="/")
+
+#change percentage to 2 digit
+join_delrep2[,'percentage']=round(join_delrep2[,'percentage'],2)
+
+#************FOR mutant associate drug resistance*****************
+  
+try6BarT1<-try6%>%select(gene,agent,S1_mutant,S2_mutant,p.val,sig,subtype)%>%gather(key=subgroup,value=count,-gene,-agent,-p.val,-sig,-subtype)
+
+#Add percentage of mutant count in each subgroup
+try6BarT2<-try6%>%ungroup(S1_mutant)%>%select(gene,agent,p.val,sig,subtype,percentage_S1M,percentage_S2M)%>%gather(key=subgroup_percentage,value=percentage,-gene,-agent,-p.val,-sig,-subtype)
+
+#Slice duplicate
+try6Barslice1<-try6BarT1%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))
+try6Barslice2<-try6BarT2%>% group_by(gene,agent,subgroup_percentage) %>% slice(which.min(percentage))
+
+#join table key gene, agent,
+join2<- full_join(try6Barslice1,try6Barslice2)
+
+#handle with replicate
+#unite subgroup and subgroup_percentage 
+#filter only S1_mutant.percentage_S1M and S2_mutant.percentage_S2M
+
+join_delrep_r<- unite_(join2, "subgroup_subgroup_percentage", c("subgroup","subgroup_percentage"),sep = '/')
+join_delrep1.1<- dplyr::filter(join_delrep_r, grepl('S1_mutant/percentage_S1M|S2_mutant/percentage_S2M',subgroup_subgroup_percentage))
+
+join_delrep2.1<-join_delrep1.1%>%separate(subgroup_subgroup_percentage, into=c("subgroup","subgroup_percentage"),sep="/")
+
+#change percentage to 2 digit
+join_delrep2.1[,'percentage']=round(join_delrep2.1[,'percentage'],2)
+
+
+joinslice<-join%>% select(gene,agent,subgroup,count,subgroup_percentage,percentage)%>% group_by(gene,agent,subgroup,subgroup_percentage) %>% slice(which.min(count))
+joinslice$gene_ro = factor(joinslice$gene,  levels=c('FLT3','LRP1B','BLM','NCOR1','SMARCA4','NOTCH3','SLC19A1','PEG3','ARID1A','KRAS','KEAP1','KCNN3','MSH6'))
+#plot sunburst
+g<- ggplot(joinslice, aes(x=agent,y=count,fill=subgroup,label = count))+geom_bar(stat="identity",width=1)+  facet_wrap(gene_ro ~.,nrow=4)+scale_fill_manual(name = "Subgroup",values = c('cyan','orange'))+theme_minimal(base_size = 5)
+g+coord_polar(theta = "x") +geom_text(size = 3, position = position_stack(vjust = 0.5))+theme(legend.position = "bottom")
+
+#filter and plot
+joinslicef<-join%>% select(gene,agent,subgroup,count)%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))%>% filter(gene %in% c("FLT3", "LRP1B","BLM","NCOR1","SMARCA4","NOTCH3","SLC19A1"))
+joinslicef$gene_rof = factor(joinslicef$gene,  levels=c('FLT3','LRP1B','BLM','NCOR1','SMARCA4','NOTCH3','SLC19A1'))
+#filter and plot S1
+joinslicef2<-join%>% select(gene,agent,subgroup,count)%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))%>% filter(gene %in% c("FLT3", "LRP1B"))
+joinslicef2$gene_rof = factor(joinslicef2$gene,  levels=c('FLT3','LRP1B'))
+
+#filter and plot S2
+joinslicef3<-join%>% select(gene,agent,subgroup,count)%>% group_by(gene,agent,subgroup) %>% slice(which.min(count))%>% filter(gene %in% c("BLM","NCOR1","SMARCA4","NOTCH3","SLC19A1"))
+joinslicef3$gene_rof = factor(joinslicef3$gene,  levels=c('BLM','NCOR1','SMARCA4','NOTCH3','SLC19A1'))
+
+join_percentage<-full_join(join_delrep2,join_delrep2.1)
+join_percentage_S<-join_percentage%>%filter(sig %in% c("Mutation-associated drug sensitive_p.val<0.05"))
+join_percentage_R<-join_percentage%>%filter(sig %in% c("Mutation-associated drug resistance_p.val<0.05"))
+
+#Prepare data for drug associate sensitive
+
+ggplot(join_percentage_S, aes(factor(1), percentage, fill = subgroup)) + 
+   geom_bar(color="black",stat = "identity") + coord_polar(theta = "y") + facet_grid(agent~gene) +theme_bw(base_size = 6)
+
+#df <- expand.grid(log.var = c(TRUE, FALSE), zone = 1:4)
+join_percentage_S<- mutate(join_percentage_S,
+   totsize=ave(count, agent,FUN=sum))
+
+join_percentage_S <- join_percentage_S %>% group_by(gene,agent) %>%
+    mutate(cp1=c(0,head(cumsum(percentage),-1)),
+              cp2=cumsum(percentage))
+
+join_percentage_S$gene_rof = factor(join_percentage_S$gene,  levels=c('FLT3','LRP1B','BLM','NCOR1','SMARCA4','NOTCH3','SLC19A1','PEG3','ARID1A','KRAS','KEAP1','KCNN3','MSH6'))
+
+#plot pie mutation associate sensitive
+
+ggplot(join_percentage_S) + geom_rect(aes(xmin=0,xmax=totsize*2,ymin=cp1,ymax=cp2,
+                                          fill=subgroup),color="black") + facet_grid(agent~gene_rof)+
+    coord_polar(theta = "y")+scale_fill_manual(name = "Subgroup",values = c('cyan','orange'))+theme_void(base_size = 7.5)
+
+#Prepare data for drug associate resistance
+
+ggplot(join_percentage_R, aes(factor(1), percentage, fill = subgroup)) + 
+   geom_bar(color="black",stat = "identity") + coord_polar(theta = "y") + facet_grid(agent~gene) +theme_bw(base_size = 6)
+
+#df <- expand.grid(log.var = c(TRUE, FALSE), zone = 1:4)
+join_percentage_R<- mutate(join_percentage_R,
+   totsize=ave(count, agent,FUN=sum))
+
+join_percentage_R <- join_percentage_R %>% group_by(gene,agent) %>%
+    mutate(cp1=c(0,head(cumsum(percentage),-1)),
+              cp2=cumsum(percentage))
+
+join_percentage_R$gene_rof = factor(join_percentage_R$gene,  levels=c("FLT3","LRP1B","BLM","PTEN","SMARCA4","ARID1A","KRAS","MSH6","ERBB2","KEAP1"))
+
+
+#plot pie mutation associate resistance
+
+ggplot(join_percentage_R) + geom_rect(aes(xmin=0,xmax=totsize*2,ymin=cp1,ymax=cp2,
+                                          fill=subgroup),color="black") + facet_grid(agent~gene_rof)+
+    coord_polar(theta = "y")+scale_fill_manual(name = "Subgroup",values = c('cyan','orange'))+theme_void(base_size = 7.5)
+
+
+Final <- bind_rows(join_percentage_S,join_percentage_R)
+
+
+Final <- bind_rows(join_percentage_S,join_percentage_R)
+ggplot(Final) + geom_rect(aes(xmin=0,xmax=totsize*2,ymin=cp1,ymax=cp2,
+                                          fill=subgroup),color="black") + facet_wrap(agent~gene_rof)+
+    coord_polar(theta = "y")+scale_fill_manual(name = "Subgroup",values = c('cyan','orange'))+theme_void(base_size = 7.5)
+
+
+
+```
