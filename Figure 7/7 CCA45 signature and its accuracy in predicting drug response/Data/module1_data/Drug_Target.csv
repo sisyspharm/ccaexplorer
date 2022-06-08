@@ -1,0 +1,97 @@
+Drug,Target,TargetCat,TargetProtein
+Epirubicin,Intercalation_into_DNA,Chemodrugs (DNA intercalation),Topo I
+Camptothecin,Topoisomerase,Chemodrugs (Topo I),Topo I
+Topotecan,Topoisomerase,Chemodrugs (Topo I),Topo I
+Etoposide,Topoisomerase,Chemodrugs (Topo I),Topo II
+Paclitaxel,Mitotic,Chemodrugs (Mitosis),Microtubule
+Vincristine,Mitotic,Chemodrugs (Mitosis),Microtubule
+Gemcitabine,Pyrimidine_antagonists,Chemodrugs (Pyrimidine ant.),DNA
+FiveFU,Pyrimidine_antagonists,Chemodrugs (Pyrimidine ant.),DNA
+Cisplatin,Alkylating_agent,Chemodrugs (Alkylation),DNA
+Oxaliplatin,Alkylating_agent,Chemodrugs (Alkylation),DNA
+Busilfan,Alkylating_agent,Chemodrugs (Alkylation),DNA
+Ifofosfamide,Alkylating_agent,Chemodrugs (Alkylation),DNA
+TAE684,RTK_signaling_MET_ALK,RTK Signaing (MET/ALK),ALK
+PHA665752,RTK_signaling_MET_ALK,RTK Signaing (MET/ALK),cMET
+Crizotinib,RTK_signaling_MET_ALK,RTK Signaing (MET/ALK),cMET
+Bortezomib,Proteosome,Proteosome,Proteasome
+NVP.AEW541,RTK_signaling_IGFR,RTK Signaling (IGFR),IGF1R
+Sunitinib,RTK_signaling_VEGFR,RTK Signaling (IGFR),PDGFR
+Vandetanib,RTK_signaling_VEGFR,RTK Signaling (IGFR),VEGFR
+Masitinib,RTK_signaling_VEGFR,RTK Signaling (IGFR),KIT
+Tanespimycin,HSP90,HSP90,HSP90
+K03861,CDK,CDK,CDK2
+CDK1_2III,CDK,CDK,CDK1/2
+CDK1,CDK,CDK,CDK1/2
+Abemaciclib,CDK,CDK,CDK4/6
+Ribociclib,CDK,CDK,CDK4/6
+RO3306,CDK,CDK,CDK1
+Palbociclib,CDK,CDK,CDK4/6
+Bosutinib,ABL_signaling,SRC/ABL Signaling,SRC/ABL
+Dasatinib,ABL_signaling,SRC/ABL Signaling,SRC/ABL
+Saracatinib,ABL_signaling,SRC/ABL Signaling,SRC
+Nilotinib,ABL_signaling,SRC/ABL Signaling,BCR-ABL
+Methotexate,Antimetabolite,Antimetabolite,DHFR
+AZD4547,RTK_signaling_FGFR,RTK Signaling (FGFR),FGFR
+BGJ398.NVP,RTK_signaling_FGFR,RTK Signaling (FGFR),FGFR
+BGJ398.Nov,RTK_signaling_FGFR,RTK Signaling (FGFR),FGFR
+Panobinostat,Epigenetic,Epigenetic,HDAC
+Trichostatin,Epigenetic,Epigenetic,HDAC
+Vorinostat,Epigenetic,Epigenetic,HDAC
+JQ1,Epigenetic,Epigenetic,BET
+Azacitidine,Epigenetic,Epigenetic,DNMT
+I.BET,Epigenetic,Epigenetic,BET
+Decitabine,Epigenetic,Epigenetic,DNMT
+RG108,Epigenetic,Epigenetic,DNMT
+Anisomycin,JNK_signaling,JNK signaling,JNK
+SP600125,JNK_signaling,JNK signaling,JNK
+Dovitinib,RTK_signaling_Multi_RTK,RTK Signaling (Multi RTKs),FLT3
+Imatinib,RTK_signaling_Multi_RTK,RTK Signaling (Multi RTKs),PDGFR
+Sorafenib,RTK_signaling_Multi_RTK,RTK Signaling (Multi RTKs),RAF
+Afatinib,RTK_signaling_EGFR,RTK Signaling (EGFR),EGFR
+Lapatinib,RTK_signaling_EGFR,RTK Signaling (EGFR),EGFR
+Gefitinib,RTK_signaling_EGFR,RTK Signaling (EGFR),EGFR
+Erlotinib,RTK_signaling_EGFR,RTK Signaling (EGFR),EGFR
+Selumetinib,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),MEK1/2
+RAF265,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),RAF
+PD0325901,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),MEK1/2
+TAK733,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),MEK1/2
+PD318088,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),MEK1/2
+Nutlin.3,MDM2_P53,P53,P53
+PD98059,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),MEK1/2
+PLX4720,ERK_MAPK_signaling,MAPK Signaling (MEK/ERK),BRAF
+Omipalisib,TOR_signaling,mTOR Signaling,mTOR
+BEZ.235,TOR_signaling,mTOR Signaling,PI3K
+AZD8055,TOR_signaling,mTOR Signaling,mTOR
+Rapamycin,TOR_signaling,mTOR Signaling,mTOR
+Everolimus,TOR_signaling,mTOR Signaling,mTOR
+MHY1485,TOR_signaling,mTOR Signaling,mTOR
+A443654,PI3K_signaling,PI3K Signaling,AKT
+Bupalisib,PI3K_signaling,PI3K Signaling,PI3K
+BYL719,PI3K_signaling,PI3K Signaling,PI3K
+LY294002,PI3K_signaling,PI3K Signaling,PI3K
+MK2206,PI3K_signaling,PI3K Signaling,AKT
+Olaparib,PARP,PARP,PARP
+BAY11.7082,NF_kB,NF-kB,NF-kB
+Caffeic.APE,NF_kB,NF-kB,NF-kB
+JSH23,NF_kB,NF-kB,NF-kB
+Mycophenolate.Mofetil,Dehydrogenase,Dehydrogenase,IMPDH
+AGI.6780,Dehydrogenase,Dehydrogenase,IDH2
+LCL161,IAP,IAP,IAP
+SB203580,P38_MAPK_signaling,MAPK Signaling (p38),p38
+SB202190,P38_MAPK_signaling,MAPK Signaling (p38),p38
+Ruxolitinib,JAK_STAT_signaling,JAK/STAT Signaling,JAK1/2
+Tofacitinib,JAK_STAT_signaling,JAK/STAT Signaling,JAK3
+Cyclopamine,Hedgehog_signaling,Hedgehog Signaling,Hh
+Vismodegib,Hedgehog_signaling,Hedgehog Signaling,Hh
+INC280,cMET,cMET,cMET
+L.685458,Gamma_secretase,Gamma secretase,Gamma secretase
+IWP.L6,Wnt_beta_catenin,Wnt/beta-catenin Signaling,Wnt
+Momelotinib,JAK_STAT_signaling,JAK/STAT Signaling,JAK1/2
+Staurosporine,PKC,PKC,PKC
+Celastrol,Proteosome,Proteosome,Proteasome
+SH-4-54,JAK_STAT_signaling,JAK/STAT Signaling,STAT3
+Fludarabine,JAK_STAT_signaling,JAK/STAT Signaling,STAT1
+Bleomycin,Alkylating_agent,Chemodrugs (Alkylation),DNA
+Subtype,Control,Control,Control
+Irinotecan,Intercalation_into_DNA,Chemodrugs (DNA intercalation),Topo I
